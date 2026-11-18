@@ -1,10 +1,10 @@
 # TaskFlow
 
 Full-stack project and task management: workspaces, Kanban boards, labels,
-comments, and an activity feed. The **Express REST API** and **Next.js web app**
-share the same domain logic; the **web UI** is a client-rendered Next.js app
-that calls the REST API from the browser (TanStack Query, Bearer tokens in
-`localStorage`). The backend is structured so the same
+comments, and an activity feed. The **Express REST API** holds the domain logic;
+the **web app** is a React single-page app (Vite, TanStack Router and TanStack
+Query) that calls the REST API from the browser with Bearer tokens kept in
+`localStorage`. The backend is structured so the same
 services can later be exposed through an MCP server without duplicating
 authorization or business rules.
 
@@ -13,19 +13,19 @@ authorization or business rules.
 | Layer    | Technologies |
 | -------- | ------------ |
 | API      | Express 5, TypeScript, Zod, Prisma 7, Prisma Postgres |
-| Web      | Next.js 16, React 19, Tailwind CSS 4, shadcn/ui, dnd-kit |
+| Web      | Vite, React 19, TanStack Router + Query, Tailwind CSS 4, Base UI, dnd-kit |
 | Auth     | JWT access tokens + rotating opaque refresh tokens (argon2 password hashing) |
 | Dev ops  | Docker Compose (API + web), hosted Prisma Postgres |
 
 ## Features
 
-- **Workspaces** with slug, settings, and role-based access (`OWNER` → `VIEWER`)
+- **Workspaces** with slug, settings, and workspace ownership and project roles (`WORKSPACE_OWNER`, `ADMIN`, `MEMBER`)
 - **Projects** with status, archive/unarchive, and per-project **board** and **list** views
 - **Tasks** with status, priority, assignee, due dates, subtasks, and drag-and-drop on boards
-- **Labels** at workspace scope, attachable to tasks
+- **Labels** at project scope, attachable to tasks
 - **Comments** (soft-deleted for activity continuity)
 - **Activity** feed per workspace
-- **Members** management and invitations by role
+- **Members** management with explicit project roles (no invitations)
 
 ## Running it
 
@@ -53,6 +53,7 @@ regenerates the client at startup because its development bind mount hides
 generated files from the image.
 
 Open the UI at `http://localhost:${WEB_PORT:-3100}` and register an account.
+
 Existing data in a local database is not copied by the migration command.
 
 **First time**, or after changing dependencies:
@@ -63,26 +64,22 @@ docker compose run --rm web npm ci
 docker compose exec api npm run db:migrate
 ```
 
-The seed is optional and **deletes all existing application data** before
-creating demo accounts. Run `docker compose exec api npm run db:seed` only against
-a disposable database.
-
 ### Web on the host
 
-The browser calls the API at `NEXT_PUBLIC_API_URL` (see `.env.example`). Compose
-sets this to `http://localhost:4000/api`. The API must allow your web origin via
-`CORS_ORIGIN` (default `http://localhost:3100`).
+In development the browser calls `/api` on the Vite dev server, which forwards
+it to the API (`API_PROXY_TARGET`, default `http://localhost:4000`; Compose sets
+`http://api:4000`). No CORS setup is needed.
 
 If you run the UI locally instead of Compose:
 
 ```bash
-cd web && npm ci && NEXT_PUBLIC_API_URL=http://localhost:4000/api npm run dev
+cd web && npm ci && npm run dev   # http://localhost:3100
 ```
 
 Auth: login/register store access and refresh tokens in `localStorage`
-(`web/src/lib/auth-storage.ts`). Requests use `Authorization: Bearer` via
-`web/src/lib/api-client.ts`, with automatic refresh on `401`. Route protection
-is client-side (`web/src/components/auth-guard.tsx`).
+(`web/src/lib/auth.ts`). Requests use `Authorization: Bearer` via
+`web/src/lib/api.ts`, with automatic refresh on `401`. Route protection is
+client-side, in the `_app` route's `beforeLoad`.
 
 ### Day-to-day commands
 
@@ -90,7 +87,7 @@ is client-side (`web/src/components/auth-guard.tsx`).
 
 ```bash
 docker compose exec api npm run typecheck
-docker compose exec web npx tsc --noEmit
+docker compose exec web npm run typecheck
 docker compose exec api npm run db:migrate
 docker compose logs -f api
 docker compose logs -f web
@@ -111,53 +108,41 @@ them before running against a database with data. To create a new migration with
 GitHub Actions runs API and web checks on pull requests and pushes to `main`.
 The API Docker image build does not connect to the database. When a production
 container starts, it runs `prisma migrate deploy` before accepting requests.
-This applies only committed migrations; it does not run the destructive seed
-script. Set `DIRECT_URL` on the API host to the **direct connection URL for the
+This applies only committed migrations. Set `DIRECT_URL` on the API host to the **direct connection URL for the
 production database**. The API container also needs `DATABASE_URL` for its
 pooled application queries.
 
 Deploy the Express API on a separate host. Set `JWT_ACCESS_SECRET` and
-`JWT_REFRESH_SECRET` there. Import this repository into Vercel as a Next.js
-project with **Root Directory** set to `web`. Set Vercel's server-side
-`API_URL` to the deployed API's HTTPS URL ending in `/api` (for example,
-`https://api.example.com/api`). The web app does not need database credentials.
+`JWT_REFRESH_SECRET` there. Import this repository into Vercel with **Root Directory** set to `web`;
+`web/vercel.json` sets the Vite build and serves `index.html` for every app
+route. Set `VITE_API_URL` in Vercel to the deployed API's HTTPS URL ending in
+`/api` (for example, `https://api.example.com/api`). Vite reads it at build
+time, so redeploy after changing it. On the API host, add the web app's origin
+(for example, `https://taskflow.vercel.app`) to `CORS_ORIGIN`; it takes a
+comma-separated list of exact origins, so preview deployments need their URL
+added too. The web app does not need database credentials.
 
 Vercel deploys from GitHub automatically. Start the updated API container and
 verify its migration succeeds before promoting web changes that depend on the
 new schema.
 
-### Seeded accounts
-
-`npm run db:seed` **wipes every table**, then creates the `acme-rockets`
-workspace with `ada@taskflow.dev` (owner), `grace@taskflow.dev` (admin) and
-`linus@taskflow.dev` (member). Password for all three: `password123`.
-
-## Trying the API
-
-The `requests/` directory holds `.http` files grouped by module, runnable from an
-editor REST client. Each file logs in first and reuses the token; run requests
-top to bottom.
-
-Files: `auth.http`, `workspaces.http`, `projects.http`, `tasks.http`,
-`comments-activity.http`.
-
 ## Repository layout
 
 ```
 src/                    # Express API
-  server.ts app.ts routes.ts env.ts seed.ts
+  server.ts app.ts routes.ts env.ts
   lib/                  prisma, tokens, password, errors, http, pagination, rbac, …
   middleware/           requireAuth, errorHandler
   modules/<auth|workspaces|projects|tasks|labels|comments|activity>/
                         *.routes.ts  *.controller.ts  *.service.ts  *.schema.ts
 
-web/                    # Next.js app (see web/ARCHITECTURE.md for URL + project context)
-  src/app/              routes (auth, workspaces, /w/[workspaceId]/…)
-  src/components/       UI, app shell, tasks (board, table, detail)
-  src/lib/              api client, Server Actions, RBAC helpers, data loaders
+web/                    # Vite + React app
+  src/routes/           file-based TanStack Router routes (/login, /w/$workspaceId/…)
+  src/components/       ui primitives, app shell, tasks (board, list, panel), mobile
+  src/lib/              api client, auth, query keys + options, mutations, design tokens
 
 prisma/                 schema and migrations
-requests/               REST client examples
+tests/                  API integration test (npm run test:integration)
 ```
 
 Every API module repeats the same four files: routes map paths to controllers,
@@ -211,7 +196,7 @@ except register, login, and refresh.
 
 ### Labels, comments, activity
 
-- `GET /workspaces/:workspaceId/labels`, `POST /workspaces/:workspaceId/labels`
+- `GET /projects/:projectId/labels`, `POST /projects/:projectId/labels`
 - `PATCH /labels/:labelId`, `DELETE /labels/:labelId`
 - `GET /tasks/:taskId/comments`, `POST /tasks/:taskId/comments`
 - `PATCH /comments/:commentId`, `DELETE /comments/:commentId`
@@ -219,11 +204,34 @@ except register, login, and refresh.
 
 ### Roles
 
-`OWNER > ADMIN > MEMBER > VIEWER`. Reads need `VIEWER`, creating and editing
-content needs `MEMBER`, managing members and archiving needs `ADMIN`, and
-deleting a workspace or granting ownership needs `OWNER`. A workspace always
-keeps at least one owner. Non-members get `404` rather than `403`, so private
-workspaces are indistinguishable from ones that do not exist.
+TaskFlow uses `WORKSPACE_OWNER`, `ADMIN`, and `MEMBER`. Each workspace has
+exactly one owner; Admin/Member roles belong to explicit project assignments.
+Any registered user may create a workspace and become its owner. Only the
+workspace owner manages workspace people/settings, creates projects, changes
+seat limits, and archives/restores/deletes projects. Assigned project admins
+manage project settings and other project users; they cannot remove or demote
+themselves. Members can create/edit/delete tasks and their own comments.
+No actor can edit/delete another user's comments. Archived projects reject
+writes. Unassigned users receive `404` for inaccessible projects/tasks.
+
+See [the feature matrix](FEATURE_MATRIX.md) for all agreed rules and
+[the changelog](CHANGELOG.md) for what changed and known limitations. The web
+app follows the design prototype (removed after implementation; see git
+history); its values live as design tokens in `web/src/styles.css` and
+`web/src/lib/design.ts`.
+
+### Integration tests
+
+`npm run test:integration` exercises the running API at `http://localhost:4000/api`
+(override with `TASKFLOW_TEST_API`). It creates unique test accounts/workspaces
+and cleans up only its own fixtures. It does not reset the database. Tests cover
+project isolation, role enforcement, seats, ownership transfer, comments, saved
+views, preference persistence, sessions, and the six-second Undo window.
+
+The initial migration defines the current schema. The existing hosted
+Prisma Postgres database was reset with user authorization during development;
+no old-data migration/backfill is included. Do not run a reset as a normal startup
+step. Future schema changes still need reviewed migrations.
 
 ### Conventions
 

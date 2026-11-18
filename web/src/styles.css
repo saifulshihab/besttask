@@ -1,0 +1,208 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+/*
+ * Design tokens taken from the design prototype. The prototype hard-codes
+ * these values inline; every component here uses the tokens instead, so the
+ * palette lives in one place. Names describe the role, not the hue.
+ *
+ * The type scale is the prototype's, not Tailwind's default: text-sm is 13px
+ * (body copy in lists, menus and controls) and text-base is 14px.
+ */
+@theme {
+  --font-sans: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --text-2xs: 11px;
+  --text-2xs--line-height: 1.35;
+  --text-xs: 12px;
+  --text-xs--line-height: 1.4;
+  --text-sm: 13px;
+  --text-sm--line-height: 1.4;
+  --text-base: 14px;
+  --text-base--line-height: 1.45;
+  --text-md: 15px;
+  --text-md--line-height: 1.4;
+  --text-lg: 16px;
+  --text-lg--line-height: 1.35;
+  --text-xl: 20px;
+  --text-xl--line-height: 1.3;
+  --text-2xl: 22px;
+  --text-2xl--line-height: 1.25;
+
+  /* Text, strongest to weakest */
+  --color-ink: #1c1917;
+  --color-ink-2: #44403c;
+  --color-muted: #57534e;
+  --color-faint: #a8a29e;
+
+  /* Surfaces */
+  --color-canvas: #ffffff;
+  --color-sidebar: #f7f7f5;
+  --color-hover: #efeeec;
+  --color-menu-hover: #f5f5f4;
+  --color-row-hover: #fafaf9;
+
+  /* Borders */
+  --color-line: #e7e5e4;
+  --color-line-strong: #d6d3d1;
+  --color-line-soft: #f0efed;
+
+  /* Accent (indigo) */
+  --color-accent: #4338ca;
+  --color-accent-hover: #3730a3;
+  /* Hover fill behind white text (primary buttons). */
+  --color-accent-strong: #3730a3;
+  --color-accent-ink: #312e81;
+  --color-accent-soft: #ecebfa;
+  --color-accent-tint: #eef2ff;
+  --color-accent-line: #a5b4fc;
+
+  /* Danger */
+  --color-danger: #b91c1c;
+  /* Filled danger buttons (white text on top). */
+  --color-danger-solid: #b91c1c;
+  --color-danger-ink: #991b1b;
+  --color-danger-soft: #fef2f2;
+  --color-danger-line: #fecaca;
+
+  /* Success (Saved, success toasts) */
+  --color-success: #15803d;
+
+  /* Warning (almost full, owner pill, cautions) */
+  --color-warn-ink: #92400e;
+  --color-warn-soft: #fffbeb;
+  --color-warn-line: #fde68a;
+
+  /* Toast */
+  --color-toast: #ffffff;
+  --color-toast-ink: #1c1917;
+  --color-toast-line: #e7e5e4;
+  --color-toast-button: #ecebfa;
+  --color-toast-button-ink: #4338ca;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+
+  --shadow-popover: 0 12px 32px rgba(28, 25, 23, 0.16);
+  --shadow-modal: 0 24px 64px rgba(28, 25, 23, 0.28);
+  --shadow-toast: 0 8px 24px rgba(28, 25, 23, 0.12), 0 2px 6px rgba(28, 25, 23, 0.06);
+}
+
+/*
+ * Dark appearance (M04). The prototype only specifies light; these values
+ * extend the same stone neutrals and indigo accent. Domain chips (status,
+ * label, priority, avatar) keep their own light tints in both themes.
+ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-ink: #f5f5f4;
+  --color-ink-2: #d6d3d1;
+  --color-muted: #a8a29e;
+  --color-faint: #78716c;
+  --color-canvas: #1c1917;
+  --color-sidebar: #171412;
+  --color-hover: #2c2826;
+  --color-menu-hover: #292524;
+  --color-row-hover: #211d1b;
+  --color-line: #36312e;
+  --color-line-strong: #44403c;
+  --color-line-soft: #2a2624;
+  --color-accent: #5b5ef0;
+  --color-accent-hover: #a5b4fc;
+  --color-accent-strong: #4f46e5;
+  --color-accent-ink: #c7d2fe;
+  --color-accent-soft: #2b2856;
+  --color-accent-tint: #24214a;
+  --color-accent-line: #4f46e5;
+  /* Text red and filled-button red differ in dark mode: each passes 4.5:1
+     (red text on the dark surfaces; white text on the button). */
+  --color-danger: #f05252;
+  --color-danger-solid: #dc2626;
+  --color-danger-ink: #fca5a5;
+  --color-danger-soft: #3a1616;
+  --color-danger-line: #7f1d1d;
+  --color-success: #4ade80;
+  --color-warn-ink: #fcd34d;
+  --color-warn-soft: #3a2a10;
+  --color-warn-line: #78501a;
+  --color-toast: #292524;
+  --color-toast-ink: #fafaf9;
+  --color-toast-line: #44403c;
+  --color-toast-button: #3a3670;
+  --color-toast-button-ink: #c7d2fe;
+  --shadow-popover: 0 12px 32px rgba(0, 0, 0, 0.5);
+  --shadow-toast: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.6);
+}
+
+@layer base {
+  /* Search fields draw their own clear button (SearchClear), the same in every browser. */
+  input[type="search"]::-webkit-search-cancel-button,
+  input[type="search"]::-webkit-search-decoration {
+    appearance: none;
+  }
+
+  /* The 14px base size goes on body, not html: Tailwind's spacing is in rem,
+     so a smaller root font would shrink every padding and gap with it. */
+  html {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-canvas);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+  }
+
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  a {
+    color: var(--color-accent-hover);
+  }
+
+  a:hover {
+    color: var(--color-accent-ink);
+  }
+}
+
+/* react-colorful, sized and rounded to match the popovers. */
+.tf-color-picker.react-colorful {
+  width: 100%;
+  height: 150px;
+  gap: 10px;
+}
+.tf-color-picker .react-colorful__saturation {
+  border-radius: 6px;
+  border-bottom: 0;
+}
+.tf-color-picker .react-colorful__hue {
+  height: 12px;
+  border-radius: 999px;
+}
+.tf-color-picker .react-colorful__pointer {
+  width: 18px;
+  height: 18px;
+  border-width: 2px;
+}
+.tf-color-picker .react-colorful__interactive:focus .react-colorful__pointer {
+  transform: translate(-50%, -50%) scale(1.15);
+  box-shadow: 0 0 0 2px var(--color-accent);
+}

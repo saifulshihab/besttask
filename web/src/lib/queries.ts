@@ -1,174 +1,182 @@
-"use client";
-
-import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "./api-client";
+import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
+import { api, apiAll } from "./api";
 import type {
   ActivityEvent,
-  Comment,
-  CurrentUser,
-  Label,
-  Member,
   Paginated,
-  Project,
+  Candidate,
+  Comment,
+  Label,
+  Me,
+  ProjectDetail,
+  ProjectListItem,
+  ProjectPerson,
+  SavedView,
   Task,
   Workspace,
-} from "./api-types";
-import { can } from "./rbac";
-import { queryKeys } from "./query-keys";
+  WorkspaceMember,
+  WorkspaceStats,
+} from "./types";
 
-type Query = Record<
-  string,
-  string | number | boolean | string[] | undefined | null
->;
-
-export function useMe() {
-  return useQuery({
-    queryKey: queryKeys.me,
-    queryFn: () => apiClient<CurrentUser>("/auth/me"),
-  });
-}
-
-export function useWorkspaces(query?: Query) {
-  return useQuery({
-    queryKey: queryKeys.workspaces(query),
-    queryFn: () =>
-      apiClient<Paginated<Workspace>>("/workspaces", { query }),
-  });
-}
-
-export function useWorkspace(workspaceId: string) {
-  return useQuery({
-    queryKey: queryKeys.workspace(workspaceId),
-    queryFn: () => apiClient<Workspace>(`/workspaces/${workspaceId}`),
-    enabled: Boolean(workspaceId),
-  });
-}
-
-export function useMembers(workspaceId: string, query?: Query) {
-  return useQuery({
-    queryKey: queryKeys.members(workspaceId, query),
-    queryFn: () =>
-      apiClient<Paginated<Member>>(`/workspaces/${workspaceId}/members`, {
-        query: { pageSize: 100, ...query },
-      }),
-    enabled: Boolean(workspaceId),
-  });
-}
-
-export function useProjects(workspaceId: string, query?: Query) {
-  return useQuery({
-    queryKey: queryKeys.projects(workspaceId, query),
-    queryFn: () =>
-      apiClient<Paginated<Project>>(`/workspaces/${workspaceId}/projects`, {
-        query,
-      }),
-    enabled: Boolean(workspaceId),
-  });
-}
-
-export function useProject(projectId: string) {
-  return useQuery({
-    queryKey: queryKeys.project(projectId),
-    queryFn: () => apiClient<Project>(`/projects/${projectId}`),
-    enabled: Boolean(projectId),
-  });
-}
-
-export function useWorkspaceTasks(workspaceId: string, query?: Query) {
-  return useQuery({
-    queryKey: queryKeys.workspaceTasks(workspaceId, query),
-    queryFn: () =>
-      apiClient<Paginated<Task>>(`/workspaces/${workspaceId}/tasks`, {
-        query,
-      }),
-    enabled: Boolean(workspaceId),
-  });
-}
-
-export function useProjectTasks(projectId: string, query?: Query) {
-  return useQuery({
-    queryKey: queryKeys.projectTasks(projectId, query),
-    queryFn: () =>
-      apiClient<Paginated<Task>>(`/projects/${projectId}/tasks`, { query }),
-    enabled: Boolean(projectId),
-  });
-}
-
-export function useTask(taskId: string) {
-  return useQuery({
-    queryKey: queryKeys.task(taskId),
-    queryFn: () => apiClient<Task>(`/tasks/${taskId}`),
-    enabled: Boolean(taskId),
-  });
-}
-
-export function useLabels(workspaceId: string) {
-  return useQuery({
-    queryKey: queryKeys.labels(workspaceId),
-    queryFn: () => apiClient<Label[]>(`/workspaces/${workspaceId}/labels`),
-    enabled: Boolean(workspaceId),
-  });
-}
-
-export function useActivity(workspaceId: string, query?: Query) {
-  return useQuery({
-    queryKey: queryKeys.activity(workspaceId, query),
-    queryFn: () =>
-      apiClient<Paginated<ActivityEvent>>(
-        `/workspaces/${workspaceId}/activity`,
-        { query },
-      ),
-    enabled: Boolean(workspaceId),
-  });
-}
-
-export type TaskDetailContext = {
-  task: Task;
-  workspace: Workspace;
-  members: Member[];
-  labels: Label[];
-  subtasks: Task[];
-  comments: Comment[];
-  me: CurrentUser;
-  canEdit: boolean;
-  canModerateComments: boolean;
+/**
+ * Every cache key in the app comes from here. Mutations invalidate the
+ * narrowest key that covers what they changed, never the whole cache: a bare
+ * invalidateQueries() refetches every mounted query after each click.
+ *
+ * Keys nest, so invalidating keys.project(id) also covers its members.
+ */
+export const keys = {
+  me: ["me"] as const,
+  workspaces: ["workspaces"] as const,
+  workspace: (id: string) => ["workspace", id] as const,
+  projects: (workspaceId: string) => ["workspace", workspaceId, "projects"] as const,
+  project: (id: string) => ["project", id] as const,
+  projectMembers: (id: string) => ["project", id, "members"] as const,
+  /** Every task in the project, subtasks included; board and list filter locally. */
+  projectTasks: (id: string) => ["project", id, "tasks"] as const,
+  projectLabels: (id: string) => ["project", id, "labels"] as const,
+  projectCandidates: (id: string) => ["project", id, "candidates"] as const,
+  projectViews: (id: string) => ["project", id, "views"] as const,
+  task: (id: string) => ["task", id] as const,
+  taskComments: (id: string) => ["task", id, "comments"] as const,
+  taskActivity: (id: string) => ["task", id, "activity"] as const,
+  activity: (workspaceId: string, filters: ActivityFilters = {}) =>
+    ["workspace", workspaceId, "activity", filters] as const,
+  workspaceMembers: (id: string) => ["workspace", id, "members"] as const,
+  workspaceStats: (id: string) => ["workspace", id, "stats"] as const,
 };
 
-export function useTaskDetailContext(workspaceId: string, taskId: string | null) {
-  return useQuery({
-    queryKey: queryKeys.taskDetail(workspaceId, taskId ?? ""),
-    queryFn: async (): Promise<TaskDetailContext> => {
-      const task = await apiClient<Task>(`/tasks/${taskId}`);
-      if (task.project.workspaceId !== workspaceId) {
-        throw new Error("Task not found");
-      }
-
-      const [workspace, members, labels, subtasks, comments, me] =
-        await Promise.all([
-          apiClient<Workspace>(`/workspaces/${workspaceId}`),
-          apiClient<Paginated<Member>>(`/workspaces/${workspaceId}/members`, {
-            query: { pageSize: 100 },
-          }),
-          apiClient<Label[]>(`/workspaces/${workspaceId}/labels`),
-          apiClient<Task[]>(`/tasks/${taskId}/subtasks`),
-          apiClient<Paginated<Comment>>(`/tasks/${taskId}/comments`, {
-            query: { pageSize: 100 },
-          }),
-          apiClient<CurrentUser>("/auth/me"),
-        ]);
-
-      return {
-        task,
-        workspace,
-        members: members.data,
-        labels,
-        subtasks,
-        comments: comments.data,
-        me,
-        canEdit: can(workspace.role, "MEMBER"),
-        canModerateComments: can(workspace.role, "ADMIN"),
-      };
-    },
-    enabled: Boolean(workspaceId && taskId),
-  });
+export interface ActivityFilters {
+  projectId?: string;
 }
+
+export const meQuery = queryOptions({
+  queryKey: keys.me,
+  queryFn: ({ signal }) => api<Me>("/auth/me", { signal }),
+  staleTime: 5 * 60_000,
+});
+
+export const workspacesQuery = queryOptions({
+  queryKey: keys.workspaces,
+  queryFn: ({ signal }) => apiAll<Workspace>("/workspaces", {}, signal),
+});
+
+export const workspaceQuery = (id: string) =>
+  queryOptions({
+    queryKey: keys.workspace(id),
+    queryFn: ({ signal }) => api<Workspace>(`/workspaces/${id}`, { signal }),
+  });
+
+export const projectsQuery = (workspaceId: string) =>
+  queryOptions({
+    queryKey: keys.projects(workspaceId),
+    queryFn: ({ signal }) =>
+      apiAll<ProjectListItem>(
+        `/workspaces/${workspaceId}/projects`,
+        { includeArchived: true },
+        signal,
+      ),
+  });
+
+export const projectQuery = (id: string) =>
+  queryOptions({
+    queryKey: keys.project(id),
+    queryFn: ({ signal }) => api<ProjectDetail>(`/projects/${id}`, { signal }),
+  });
+
+export const projectTasksQuery = (id: string) =>
+  queryOptions({
+    queryKey: keys.projectTasks(id),
+    queryFn: ({ signal }) => apiAll<Task>(`/projects/${id}/tasks`, {}, signal),
+  });
+
+export const projectLabelsQuery = (id: string) =>
+  queryOptions({
+    queryKey: keys.projectLabels(id),
+    queryFn: ({ signal }) => api<Label[]>(`/projects/${id}/labels`, { signal }),
+  });
+
+export const projectMembersQuery = (id: string) =>
+  queryOptions({
+    queryKey: keys.projectMembers(id),
+    queryFn: ({ signal }) =>
+      api<ProjectPerson[]>(`/projects/${id}/members`, { signal }),
+  });
+
+export const projectCandidatesQuery = (id: string) =>
+  queryOptions({
+    queryKey: keys.projectCandidates(id),
+    queryFn: ({ signal }) =>
+      api<Candidate[]>(`/projects/${id}/candidates`, { signal }),
+  });
+
+export const projectViewsQuery = (id: string) =>
+  queryOptions({
+    queryKey: keys.projectViews(id),
+    queryFn: ({ signal }) =>
+      api<SavedView[]>(`/projects/${id}/views`, { signal }),
+  });
+
+/** A single task, for links to tasks outside the current project's cache. */
+export const taskQuery = (id: string) =>
+  queryOptions({
+    queryKey: keys.task(id),
+    queryFn: ({ signal }) => api<Task>(`/tasks/${id}`, { signal }),
+  });
+
+export const taskCommentsQuery = (id: string) =>
+  queryOptions({
+    queryKey: keys.taskComments(id),
+    queryFn: ({ signal }) =>
+      apiAll<Comment>(`/tasks/${id}/comments`, {}, signal),
+  });
+
+/**
+ * The task's own events, newest first, 20 per page (comments come from
+ * taskCommentsQuery). The panel timeline asks for more pages as needed.
+ */
+export const taskActivityQuery = (workspaceId: string, taskId: string) =>
+  infiniteQueryOptions({
+    queryKey: keys.taskActivity(taskId),
+    queryFn: ({ pageParam, signal }) =>
+      api<Paginated<ActivityEvent>>(`/workspaces/${workspaceId}/activity`, {
+        query: { entityId: taskId, page: pageParam, pageSize: 20 },
+        signal,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.meta.page < last.meta.totalPages ? last.meta.page + 1 : undefined),
+  });
+
+/** Events per request; the feed shows this many entries per "Load more". */
+export const ACTIVITY_PAGE_SIZE = 20;
+
+/**
+ * Activity, newest first, a page at a time (infinite query). The feed fetches
+ * more pages as the reader asks for them; see useActivityFeed.
+ */
+export const activityQuery = (workspaceId: string, filters: ActivityFilters = {}) =>
+  infiniteQueryOptions({
+    queryKey: keys.activity(workspaceId, filters),
+    queryFn: ({ pageParam, signal }) =>
+      api<Paginated<ActivityEvent>>(`/workspaces/${workspaceId}/activity`, {
+        query: { ...filters, page: pageParam, pageSize: ACTIVITY_PAGE_SIZE },
+        signal,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.meta.page < last.meta.totalPages ? last.meta.page + 1 : undefined),
+    // Any change anywhere adds events; show the cache, then refresh on visit.
+    staleTime: 0,
+  });
+
+export const workspaceMembersQuery = (id: string) =>
+  queryOptions({
+    queryKey: keys.workspaceMembers(id),
+    queryFn: ({ signal }) =>
+      apiAll<WorkspaceMember>(`/workspaces/${id}/members`, {}, signal),
+  });
+
+export const workspaceStatsQuery = (id: string) =>
+  queryOptions({
+    queryKey: keys.workspaceStats(id),
+    queryFn: ({ signal }) =>
+      api<WorkspaceStats>(`/workspaces/${id}/stats`, { signal }),
+  });
