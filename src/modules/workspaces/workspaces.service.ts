@@ -69,16 +69,11 @@ export const list = async (actor: Actor, pagination: Pagination) => {
   return paginated(data, total, pagination);
 };
 export const get = async (actor: Actor, id: string) => {
-  const m = await requireMembership(actor.id, id);
-  return {
-    ...m.workspace,
-    role: m.role,
-    _count: {
-      projects: await prisma.project.count({
-        where: visibleProjects(actor.id, id),
-      }),
-    },
-  };
+  const [m, projects] = await Promise.all([
+    requireMembership(actor.id, id),
+    prisma.project.count({ where: visibleProjects(actor.id, id) }),
+  ]);
+  return { ...m.workspace, role: m.role, _count: { projects } };
 };
 export const update = async (
   actor: Actor,
@@ -106,7 +101,11 @@ export const listMembers = async (
   workspaceId: string,
   p: Pagination,
 ) => {
-  await requireMembership(actor.id, workspaceId, Role.WORKSPACE_OWNER);
+  const owner = await requireMembership(
+    actor.id,
+    workspaceId,
+    Role.WORKSPACE_OWNER,
+  );
   const where = { workspaceId, deletedAt: null };
   const [rows, total] = await Promise.all([
     prisma.membership.findMany({
@@ -122,13 +121,13 @@ export const listMembers = async (
     }),
     prisma.membership.count({ where }),
   ]);
-  const ws = await prisma.workspace.findUniqueOrThrow({
-    where: { id: workspaceId },
-  });
   return paginated(
     rows.map((m) => ({
       ...m,
-      role: m.userId === ws.ownerId ? Role.WORKSPACE_OWNER : Role.MEMBER,
+      role:
+        m.userId === owner.workspace.ownerId
+          ? Role.WORKSPACE_OWNER
+          : Role.MEMBER,
     })),
     total,
     p,

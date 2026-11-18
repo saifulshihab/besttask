@@ -20,9 +20,10 @@ const select = {
   author: { select: { id: true, name: true, email: true } },
 } as const;
 export const list = async (actor: Actor, taskId: string, p: Pagination) => {
-  await taskScope(actor.id, taskId);
   const where = { taskId, deletedAt: null };
-  const [data, total] = await Promise.all([
+  // Data is discarded if the scope check rejects.
+  const [, data, total] = await Promise.all([
+    taskScope(actor.id, taskId),
     prisma.comment.findMany({
       where,
       ...toSkipTake(p),
@@ -50,21 +51,21 @@ export const create = async (
     entityType: "comment",
     entityId: c.id,
     action: "comment.created",
-    metadata: { taskId },
+    // The feed quotes the start of the comment, as the redesign shows.
+    metadata: { taskId, title: task.title, excerpt: input.body.slice(0, 140) },
   });
   return c;
 };
 const load = async (actor: Actor, id: string) => {
   const comment = await prisma.comment.findUnique({ where: { id } });
   if (!comment || comment.deletedAt) throw notFound("Comment");
-  await taskScope(actor.id, comment.taskId, Role.MEMBER);
+  const scope = await taskScope(actor.id, comment.taskId, Role.MEMBER);
   if (comment.authorId !== actor.id)
     throw forbidden("Only the author can change a comment");
-  return comment;
+  return { comment, scope };
 };
 export const update = async (actor: Actor, id: string, body: string) => {
-  const comment = await load(actor, id);
-  const scope = await taskScope(actor.id, comment.taskId, Role.MEMBER);
+  const { comment, scope } = await load(actor, id);
   const updated = await prisma.comment.update({
     where: { id },
     data: { body, editedAt: new Date() },
@@ -77,13 +78,12 @@ export const update = async (actor: Actor, id: string, body: string) => {
     entityType: "comment",
     entityId: id,
     action: "comment.updated",
-    metadata: { taskId: comment.taskId },
+    metadata: { taskId: comment.taskId, title: scope.task.title },
   });
   return updated;
 };
 export const remove = async (actor: Actor, id: string) => {
-  const comment = await load(actor, id);
-  const scope = await taskScope(actor.id, comment.taskId, Role.MEMBER);
+  const { comment, scope } = await load(actor, id);
   await prisma.comment.update({
     where: { id },
     data: { deletedAt: new Date() },
@@ -95,6 +95,6 @@ export const remove = async (actor: Actor, id: string) => {
     entityType: "comment",
     entityId: id,
     action: "comment.deleted",
-    metadata: { taskId: comment.taskId },
+    metadata: { taskId: comment.taskId, title: scope.task.title },
   });
 };

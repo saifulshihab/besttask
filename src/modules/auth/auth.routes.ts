@@ -37,6 +37,8 @@ const profile = z
     }),
     theme: z.enum(["light", "dark", "system"]),
     startPage: z.enum(["board", "list", "activity"]),
+    /** Required when `email` changes. */
+    currentPassword: z.string().max(128),
   })
   .partial();
 authRouter.patch(

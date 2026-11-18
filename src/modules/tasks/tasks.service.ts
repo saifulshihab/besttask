@@ -47,18 +47,23 @@ const assertAssignee = async (
   assigneeId: string | null | undefined,
 ) => {
   if (!assigneeId) return;
-  const project = await prisma.project.findUniqueOrThrow({
-    where: { id: projectId },
-    include: { workspace: true },
-  });
-  if (project.workspace.ownerId === assigneeId) return;
-  const member = await prisma.projectMembership.findFirst({
+  // The workspace owner, or an active user assigned to this project.
+  const eligible = await prisma.project.count({
     where: {
-      projectId,
-      membership: { userId: assigneeId, active: true, deletedAt: null },
+      id: projectId,
+      OR: [
+        { workspace: { ownerId: assigneeId } },
+        {
+          members: {
+            some: {
+              membership: { userId: assigneeId, active: true, deletedAt: null },
+            },
+          },
+        },
+      ],
     },
   });
-  if (!member) throw badRequest("Assignee must be an active project user");
+  if (!eligible) throw badRequest("Assignee must be an active project user");
 };
 const assertParent = async (
   projectId: string,
@@ -170,19 +175,22 @@ export const create = async (
   if (project.archivedAt) throw badRequest("Project is archived");
 
   const labelIds = input.labelIds ?? [];
-  await assertAssignee(projectId, input.assigneeId);
-  await assertParent(projectId, input.parentTaskId);
-  await assertLabels(projectId, labelIds);
-
-  const highest = await prisma.task.aggregate({
-    where: { projectId },
-    _max: { position: true },
-  });
+  await Promise.all([
+    assertAssignee(projectId, input.assigneeId),
+    assertParent(projectId, input.parentTaskId),
+    assertLabels(projectId, labelIds),
+  ]);
 
   const task = await prisma.$transaction(async (tx) => {
+    // Incrementing the sequence locks the project row, so concurrent creates
+    // in this project serialize here and cannot read the same max position.
     const sequence = await tx.project.update({
       where: { id: projectId },
       data: { sequence: { increment: 1 } },
+    });
+    const highest = await tx.task.aggregate({
+      where: { projectId },
+      _max: { position: true },
     });
     return tx.task.create({
       data: {
@@ -232,8 +240,12 @@ export const listForProject = async (
   projectId: string,
   query: ListTasksQuery,
 ) => {
-  await projectScope(actor.id, projectId);
-  return runList(actor, { projectId }, query);
+  // Authorize and list in parallel; the list is discarded if the scope fails.
+  const [, list] = await Promise.all([
+    projectScope(actor.id, projectId),
+    runList(actor, { projectId }, query),
+  ]);
+  return list;
 };
 
 export const listForWorkspace = async (
@@ -250,24 +262,25 @@ export const listForWorkspace = async (
 };
 
 export const get = async (actor: Actor, taskId: string) => {
-  await taskScope(actor.id, taskId);
-
-  const task = await prisma.task.findUnique({
-    where: { id: taskId },
-    include: taskInclude,
-  });
+  // Both run at once; the task is only returned if the scope check passes.
+  const [, task] = await Promise.all([
+    taskScope(actor.id, taskId),
+    prisma.task.findUnique({ where: { id: taskId }, include: taskInclude }),
+  ]);
   if (!task) throw notFound("Task");
 
   return present(task);
 };
 
 export const listSubtasks = async (actor: Actor, taskId: string) => {
-  await taskScope(actor.id, taskId);
-  const subtasks = await prisma.task.findMany({
-    where: { parentTaskId: taskId, deletedAt: null },
-    orderBy: { position: "asc" },
-    include: taskInclude,
-  });
+  const [, subtasks] = await Promise.all([
+    taskScope(actor.id, taskId),
+    prisma.task.findMany({
+      where: { parentTaskId: taskId, deletedAt: null },
+      orderBy: { position: "asc" },
+      include: taskInclude,
+    }),
+  ]);
   return subtasks.map(present);
 };
 
@@ -298,10 +311,45 @@ export const update = async (
     entityType: "task",
     entityId: taskId,
     action: "task.updated",
-    metadata: { fields: Object.keys(input) },
+    metadata: {
+      title: updated.title,
+      fields: Object.keys(input),
+      changes: changesOf(task, input),
+    },
   });
 
   return present(updated);
+};
+
+/**
+ * Before/after values for the fields the activity feed describes ("changed
+ * the priority to High"). Descriptions are long, so only their change is noted.
+ */
+const changesOf = (
+  before: {
+    title: string;
+    status: TaskStatus;
+    priority: string;
+    assigneeId: string | null;
+    dueDate: Date | null;
+  },
+  input: UpdateTaskInput,
+) => {
+  const changes: Record<string, { from: string | null; to: string | null }> =
+    {};
+  const day = (d: Date | null | undefined) =>
+    d ? d.toISOString().slice(0, 10) : null;
+  if (input.title !== undefined && input.title !== before.title)
+    changes.title = { from: before.title, to: input.title };
+  if (input.status !== undefined && input.status !== before.status)
+    changes.status = { from: before.status, to: input.status };
+  if (input.priority !== undefined && input.priority !== before.priority)
+    changes.priority = { from: before.priority, to: input.priority };
+  if (input.assigneeId !== undefined && input.assigneeId !== before.assigneeId)
+    changes.assigneeId = { from: before.assigneeId, to: input.assigneeId };
+  if (input.dueDate !== undefined && day(input.dueDate) !== day(before.dueDate))
+    changes.dueDate = { from: day(before.dueDate), to: day(input.dueDate) };
+  return changes;
 };
 
 /**
@@ -341,7 +389,7 @@ export const setStatus = async (
     entityType: "task",
     entityId: taskId,
     action: "task.status_changed",
-    metadata: { from: task.status, to: status },
+    metadata: { title: task.title, from: task.status, to: status },
   });
 
   return present(updated);
@@ -368,7 +416,7 @@ export const setAssignee = async (
     entityType: "task",
     entityId: taskId,
     action: assigneeId ? "task.assigned" : "task.unassigned",
-    metadata: { from: task.assigneeId, to: assigneeId },
+    metadata: { title: task.title, from: task.assigneeId, to: assigneeId },
   });
 
   return present(updated);
@@ -379,15 +427,29 @@ export const attachLabel = async (
   taskId: string,
   labelId: string,
 ) => {
-  const { task } = await taskScope(actor.id, taskId, Role.MEMBER);
-  await assertLabels(task.projectId, [labelId]);
-
-  const existing = await prisma.taskLabel.findUnique({
-    where: { taskId_labelId: { taskId, labelId } },
-  });
+  const { task, workspaceId } = await taskScope(actor.id, taskId, Role.MEMBER);
+  const [label, existing] = await Promise.all([
+    prisma.label.findFirst({
+      where: { id: labelId, projectId: task.projectId, deletedAt: null },
+    }),
+    prisma.taskLabel.findUnique({
+      where: { taskId_labelId: { taskId, labelId } },
+    }),
+  ]);
+  if (!label)
+    throw badRequest("One or more labels do not belong to this project");
   if (existing) throw conflict("Label is already attached to this task");
 
   await prisma.taskLabel.create({ data: { taskId, labelId } });
+  await recordActivity({
+    projectId: task.projectId,
+    workspaceId,
+    actorId: actor.id,
+    entityType: "task",
+    entityId: taskId,
+    action: "task.label_added",
+    metadata: { title: task.title, label: label.name },
+  });
   return get(actor, taskId);
 };
 
@@ -396,15 +458,24 @@ export const detachLabel = async (
   taskId: string,
   labelId: string,
 ) => {
-  await taskScope(actor.id, taskId, Role.MEMBER);
-
+  const { task, workspaceId } = await taskScope(actor.id, taskId, Role.MEMBER);
   const existing = await prisma.taskLabel.findUnique({
     where: { taskId_labelId: { taskId, labelId } },
+    include: { label: { select: { name: true } } },
   });
   if (!existing) throw notFound("Label on this task");
 
   await prisma.taskLabel.delete({
     where: { taskId_labelId: { taskId, labelId } },
+  });
+  await recordActivity({
+    projectId: task.projectId,
+    workspaceId,
+    actorId: actor.id,
+    entityType: "task",
+    entityId: taskId,
+    action: "task.label_removed",
+    metadata: { title: task.title, label: existing.label.name },
   });
   return get(actor, taskId);
 };
@@ -412,7 +483,9 @@ export const detachLabel = async (
 export const remove = async (actor: Actor, taskId: string) => {
   const { task, workspaceId } = await taskScope(actor.id, taskId, Role.MEMBER);
 
-  return scheduleDeletion(actor, workspaceId, "task", taskId, task.projectId);
+  return scheduleDeletion(actor, workspaceId, "task", taskId, task.projectId, {
+    title: task.title,
+  });
 };
 
 export const duplicate = async (actor: Actor, id: string) => {

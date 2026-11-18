@@ -12,7 +12,6 @@ export default {
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
-    seed: "tsx src/seed.ts",
   },
   datasource: {
     // CLI commands use the direct connection; the API uses DATABASE_URL.

@@ -3,6 +3,9 @@ generator client {
   output              = "../src/generated/prisma"
   moduleFormat        = "esm"
   importFileExtension = "js"
+  // Loads nested `include`s with SQL joins in one query instead of one query
+  // per relation level. Each round trip to the hosted database costs ~55ms.
+  previewFeatures     = ["relationJoins"]
 }
 
 datasource db {

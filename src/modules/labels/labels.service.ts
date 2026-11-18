@@ -57,5 +57,12 @@ export const update = async (
 };
 export const remove = async (actor: Actor, id: string) => {
   const { l, project } = await load(actor, id);
-  return scheduleDeletion(actor, project.workspaceId, "label", id, l.projectId);
+  return scheduleDeletion(
+    actor,
+    project.workspaceId,
+    "label",
+    id,
+    l.projectId,
+    { name: l.name },
+  );
 };

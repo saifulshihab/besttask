@@ -1,4 +1,5 @@
-import { conflict, notFound, unauthorized } from "../../lib/errors.js";
+import { badRequest, conflict, notFound, unauthorized } from "../../lib/errors.js";
+import type { Prisma } from "../../generated/prisma/client.js";
 import { hashPassword, verifyPassword } from "../../lib/password.js";
 import { prisma } from "../../lib/prisma.js";
 import {
@@ -101,22 +102,41 @@ export const me = async (userId: string) => {
   return publicUser(user);
 };
 
+/**
+ * Confirms the signed-in user's password for a sensitive change. A wrong
+ * password is a 400 (form error), not a 401: the session itself is valid, and
+ * a 401 would make clients refresh their token and retry.
+ */
+const confirmPassword = async (
+  user: { passwordHash: string },
+  password: string | undefined,
+  message = "Current password is incorrect",
+) => {
+  if (!password) throw badRequest("Enter your current password to confirm");
+  if (!(await verifyPassword(user.passwordHash, password)))
+    throw badRequest(message);
+};
+
 export const updateProfile = async (
   userId: string,
-  input: Prisma.UserUpdateInput,
-) =>
-  publicUser(await prisma.user.update({ where: { id: userId }, data: input }));
+  { currentPassword, ...input }: Prisma.UserUpdateInput & { currentPassword?: string },
+) => {
+  // Changing the sign-in email needs the current password, so an unattended
+  // session can't take over the account.
+  if (typeof input.email === "string") {
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    if (input.email !== user.email) await confirmPassword(user, currentPassword);
+  }
+  return publicUser(await prisma.user.update({ where: { id: userId }, data: input }));
+};
 
-import type { Prisma } from "../../generated/prisma/client.js";
-import { badRequest } from "../../lib/errors.js";
 export const changePassword = async (
   userId: string,
   currentPassword: string,
   password: string,
 ) => {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
-  if (!(await verifyPassword(user.passwordHash, currentPassword)))
-    throw unauthorized("Current password is incorrect");
+  await confirmPassword(user, currentPassword);
   await prisma.$transaction([
     prisma.user.update({
       where: { id: userId },
@@ -128,8 +148,7 @@ export const changePassword = async (
 };
 export const deleteAccount = async (userId: string, password: string) => {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
-  if (!(await verifyPassword(user.passwordHash, password)))
-    throw unauthorized("Password is incorrect");
+  await confirmPassword(user, password, "Password is incorrect");
   if (await prisma.workspace.count({ where: { ownerId: userId } }))
     throw badRequest("Transfer or delete owned workspaces first");
   await prisma.$transaction(async (tx) => {

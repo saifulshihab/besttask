@@ -5,26 +5,54 @@ import { projectScope } from "../../lib/scope.js";
 import { badRequest, conflict, notFound } from "../../lib/errors.js";
 import { paginated, toSkipTake } from "../../lib/pagination.js";
 import { scheduleDeletion } from "../../lib/recovery.js";
-import { Role } from "../../generated/prisma/enums.js";
+import { Role, TaskStatus } from "../../generated/prisma/enums.js";
 import type { Actor } from "../../lib/actor.js";
 import type {
   CreateProjectInput,
   ListProjectsQuery,
   UpdateProjectInput,
 } from "./projects.schema.js";
+
+/**
+ * Word initials, as the redesign shows them: "Photo Payload" -> "PP",
+ * "Mobile App" -> "MA". A single word uses its first two letters.
+ */
+const baseKey = (name: string) => {
+  const words = name.toUpperCase().match(/[A-Z][A-Z0-9]*/g) ?? [];
+  if (words.length === 0) return "PRJ";
+  if (words.length === 1) return words[0]!.slice(0, 2);
+  return words
+    .slice(0, 3)
+    .map((w) => w[0])
+    .join("");
+};
+
+/** Keys are unique per workspace; on a clash append 2, 3, … (max 5 chars). */
+const availableKey = async (workspaceId: string, name: string) => {
+  const base = baseKey(name);
+  const taken = new Set(
+    (
+      await prisma.project.findMany({
+        where: { workspaceId, key: { startsWith: base } },
+        select: { key: true },
+      })
+    ).map((p) => p.key),
+  );
+  if (!taken.has(base)) return base;
+  for (let n = 2; n < 1000; n++) {
+    const candidate = base.slice(0, 5 - String(n).length) + n;
+    if (!taken.has(candidate)) return candidate;
+  }
+  throw conflict("Choose a project key");
+};
+
 export const create = async (
   actor: Actor,
   workspaceId: string,
   input: CreateProjectInput,
 ) => {
   await requireMembership(actor.id, workspaceId, Role.WORKSPACE_OWNER);
-  const key =
-    input.key ||
-    input.name
-      .toUpperCase()
-      .replace(/[^A-Z]/g, "")
-      .slice(0, 3) ||
-    "PRJ";
+  const key = input.key || (await availableKey(workspaceId, input.name));
   const project = await prisma.project.create({
     data: { ...input, key, workspaceId },
   });
@@ -44,7 +72,6 @@ export const list = async (
   workspaceId: string,
   q: ListProjectsQuery,
 ) => {
-  await requireMembership(actor.id, workspaceId);
   const where = {
     AND: [
       visibleProjects(actor.id, workspaceId),
@@ -62,7 +89,10 @@ export const list = async (
     ...(q.includeArchived ? {} : { archivedAt: null }),
     ...(q.status ? { status: q.status } : {}),
   };
-  const [data, total] = await Promise.all([
+  // The membership check runs alongside the queries; their results are
+  // discarded if it rejects.
+  const [m, data, total] = await Promise.all([
+    requireMembership(actor.id, workspaceId),
     prisma.project.findMany({
       where,
       ...toSkipTake(q),
@@ -72,14 +102,24 @@ export const list = async (
           select: { role: true },
         },
         _count: {
-          select: { tasks: { where: { deletedAt: null } }, members: true },
+          select: {
+            // Open top-level work only: the sidebar count the redesign shows
+            // per project. Subtasks show as progress on their parent instead.
+            tasks: {
+              where: {
+                deletedAt: null,
+                parentTaskId: null,
+                status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] },
+              },
+            },
+            members: true,
+          },
         },
       },
       orderBy: { createdAt: "asc" },
     }),
     prisma.project.count({ where }),
   ]);
-  const m = await requireMembership(actor.id, workspaceId);
   return paginated(
     data.map((p) => ({
       ...p,
@@ -90,8 +130,10 @@ export const list = async (
   );
 };
 export const get = async (actor: Actor, projectId: string) => {
-  const { project, membership } = await projectScope(actor.id, projectId);
-  const used = await prisma.projectMembership.count({ where: { projectId } });
+  const [{ project, membership }, used] = await Promise.all([
+    projectScope(actor.id, projectId),
+    prisma.projectMembership.count({ where: { projectId } }),
+  ]);
   return { ...project, role: membership.role, seatsUsed: used };
 };
 export const update = async (
@@ -171,26 +213,36 @@ export const remove = async (actor: Actor, projectId: string) => {
     "project",
     projectId,
     projectId,
+    { name: project.name },
   );
 };
 export const members = async (actor: Actor, projectId: string) => {
-  const { project } = await projectScope(actor.id, projectId);
-  const ws = await prisma.workspace.findUniqueOrThrow({
-    where: { id: project.workspaceId },
-    include: {
-      owner: { select: { id: true, name: true, email: true, avatar: true } },
-    },
-  });
-  const rows = await prisma.projectMembership.findMany({
-    where: { projectId, membership: { deletedAt: null } },
-    include: {
-      membership: {
-        include: {
-          user: { select: { id: true, name: true, email: true, avatar: true } },
+  // Scope, owner and assignments load in parallel; results are discarded if
+  // the scope check rejects.
+  const [, ws, rows] = await Promise.all([
+    projectScope(actor.id, projectId),
+    // findFirst, not OrThrow, so a missing project fails through the scope
+    // check's 404 instead of racing it with a different error.
+    prisma.workspace.findFirst({
+      where: { projects: { some: { id: projectId } } },
+      include: {
+        owner: { select: { id: true, name: true, email: true, avatar: true } },
+      },
+    }),
+    prisma.projectMembership.findMany({
+      where: { projectId, membership: { deletedAt: null } },
+      include: {
+        membership: {
+          include: {
+            user: {
+              select: { id: true, name: true, email: true, avatar: true },
+            },
+          },
         },
       },
-    },
-  });
+    }),
+  ]);
+  if (!ws) throw notFound("Project");
   return [
     {
       id: ws.ownerId,
@@ -209,19 +261,17 @@ export const members = async (actor: Actor, projectId: string) => {
   ];
 };
 export const candidates = async (actor: Actor, projectId: string) => {
-  const { project } = await projectScope(actor.id, projectId, Role.ADMIN);
+  const { project, membership } = await projectScope(
+    actor.id,
+    projectId,
+    Role.ADMIN,
+  );
   return prisma.membership.findMany({
     where: {
       workspaceId: project.workspaceId,
       active: true,
       deletedAt: null,
-      userId: {
-        not: (
-          await prisma.workspace.findUniqueOrThrow({
-            where: { id: project.workspaceId },
-          })
-        ).ownerId,
-      },
+      userId: { not: membership.workspace.ownerId },
       NOT: { projects: { some: { projectId } } },
     },
     include: { user: { select: { id: true, name: true, email: true } } },

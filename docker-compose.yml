@@ -10,6 +10,9 @@ services:
       - .env
     environment:
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3100}
+      # Docker Desktop's bind mounts do not deliver file events, so without
+      # polling `tsx watch` silently keeps running stale code.
+      CHOKIDAR_USEPOLLING: "true"
     ports:
       - "${PORT:-4000}:${PORT:-4000}"
     volumes:
@@ -25,21 +28,16 @@ services:
     build: ./web
     image: taskflow-web-dev
     environment:
-      # Browser on the host calls the published API port directly.
-      NEXT_PUBLIC_API_URL: http://localhost:${PORT:-4000}/api
-      NODE_ENV: development
-      # Docker Desktop's filesystem does not deliver inotify events reliably,
-      # so the dev server polls instead.
-      WATCHPACK_POLLING: "true"
-      CHOKIDAR_USEPOLLING: "true"
+      # Vite proxies /api to the API container, so the browser needs no CORS.
+      API_PROXY_TARGET: http://api:${PORT:-4000}
+      # Docker Desktop bind mounts do not deliver file events, so Vite polls.
+      VITE_POLLING: "true"
     ports:
       # Host port is configurable because 3000 is often already taken.
-      - "${WEB_PORT:-3100}:3000"
+      - "${WEB_PORT:-3100}:3100"
     volumes:
       - ./web:/app
       - web_node_modules:/app/node_modules
-      - web_next:/app/.next
-    command: npm run dev -- --hostname 0.0.0.0
     depends_on:
       - api
     stdin_open: true
@@ -48,4 +46,3 @@ services:
 volumes:
   node_modules:
   web_node_modules:
-  web_next:

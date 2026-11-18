@@ -28,6 +28,8 @@ export const scheduleDeletion = async (
   entityType: string,
   entityId: string,
   projectId?: string,
+  /** What was deleted (title or name), so the activity entry can name it. */
+  metadata?: Prisma.InputJsonValue,
 ) => {
   return prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "Workspace" WHERE id = ${workspaceId} FOR UPDATE`;
@@ -69,6 +71,7 @@ export const scheduleDeletion = async (
         entityType: entityType as "task" | "label" | "project" | "membership",
         entityId,
         action: entityType + ".deleted",
+        ...(metadata === undefined ? {} : { metadata }),
       },
       tx,
     );
