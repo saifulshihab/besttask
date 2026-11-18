@@ -1,0 +1,17 @@
+{
+  // Build tooling (vite.config.ts) runs in Node, so it gets Node's types;
+  // the app in src/ (tsconfig.json) keeps browser-only types.
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["vite.config.ts"]
+}
