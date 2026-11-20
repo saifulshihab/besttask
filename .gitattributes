@@ -1,0 +1,4 @@
+# TanStack Router regenerates this file with LF line endings (the dev server
+# runs in a Linux container). Keep it LF in every working copy so a Windows
+# checkout doesn't see a whole-file line-ending change each time it does.
+web/src/routeTree.gen.ts text eol=lf
