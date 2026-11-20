@@ -1,5 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { useMemo } from "react";
+import { AvatarDirectory } from "@/components/ui/avatar-directory";
 import { hasSession } from "@/lib/auth";
 import { meQuery } from "@/lib/queries";
 import { useThemeSync } from "@/lib/theme";
@@ -23,5 +25,11 @@ export const Route = createFileRoute("/_app")({
 function SignedIn() {
   const { data: me } = useSuspenseQuery(meQuery);
   useThemeSync(me.theme);
-  return <Outlet />;
+  // Your own photo, wherever you appear (assignee, comments, activity).
+  const people = useMemo(() => [me], [me]);
+  return (
+    <AvatarDirectory people={people}>
+      <Outlet />
+    </AvatarDirectory>
+  );
 }

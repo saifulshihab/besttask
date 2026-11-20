@@ -1,11 +1,13 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { z } from "zod";
 import { Page, PageHeader } from "@/components/page";
+import { AvatarDirectory } from "@/components/ui/avatar-directory";
 import { ACTIVITY_TYPES, ActivityFeed, type ActivityType } from "@/components/activity/activity-feed";
 import { MenuItem, MenuPopup, MenuRoot, MenuTrigger } from "@/components/ui/menu";
 import { Select } from "@/components/ui/select";
-import { activityQuery, projectsQuery, workspaceQuery } from "@/lib/queries";
+import { activityQuery, projectsQuery, workspaceMembersQuery, workspaceQuery } from "@/lib/queries";
 
 const searchSchema = z.object({
   project: z.string().optional().catch(undefined),
@@ -34,8 +36,12 @@ function WorkspaceActivity() {
   const projectId = owner ? search.project : undefined;
   const type: ActivityType = owner ? (search.type ?? "all") : "all";
   const projectName = projects.find((p) => p.id === projectId)?.name ?? "All projects";
+  // The owner sees everyone's activity; their member list has everyone's photo.
+  const members = useQuery({ ...workspaceMembersQuery(workspaceId), enabled: owner });
+  const people = useMemo(() => (members.data ?? []).map((m) => m.user), [members.data]);
 
   return (
+    <AvatarDirectory people={people}>
     <Page>
         <PageHeader title="Activity" description={`Everything that changed in ${workspace.name}, newest first.`} />
         {owner ? (
@@ -76,5 +82,6 @@ function WorkspaceActivity() {
         ) : null}
         <ActivityFeed workspaceId={workspaceId} filters={projectId ? { projectId } : {}} type={type} />
     </Page>
+    </AvatarDirectory>
   );
 }

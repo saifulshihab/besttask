@@ -1,8 +1,10 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Outlet, useNavigate, useRouterState, useSearch } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { MobileProject } from "@/components/mobile/mobile-project";
 import { ProjectHeader } from "@/components/shell/project-header";
 import { RouteError } from "@/components/route-error";
+import { AvatarDirectory } from "@/components/ui/avatar-directory";
 import { TaskPanel } from "@/components/tasks/task-panel";
 import { rememberProject } from "@/lib/last-visited";
 import { projectMembersQuery, projectQuery } from "@/lib/queries";
@@ -22,15 +24,24 @@ export const Route = createFileRoute("/_app/w/$workspaceId/p/$projectId")({
 function ProjectLayout() {
   const { workspaceId, projectId } = Route.useParams();
   const { data: project } = useSuspenseQuery(projectQuery(projectId));
+  // Prefetched by the loader; photos fill in as soon as it lands.
+  const members = useQuery(projectMembersQuery(projectId));
   // Board and list both carry `?task=`; the panel opens over either.
   const taskId = useSearch({ strict: false }).task;
   const navigate = useNavigate();
   const mobile = useIsMobile();
   const onBoard = useRouterState({ select: (s) => s.location.pathname.endsWith("/board") });
   // On phones the board is the prototype's mobile app; other tabs stay pages.
-  if (mobile && onBoard) return <MobileProject workspaceId={workspaceId} project={project} />;
+  // Members' photos for cards, rows, comments and activity in this project.
+  const people = useMemo(() => (members.data ?? []).map((p) => p.user), [members.data]);
+  if (mobile && onBoard)
+    return (
+      <AvatarDirectory people={people}>
+        <MobileProject workspaceId={workspaceId} project={project} />
+      </AvatarDirectory>
+    );
   return (
-    <>
+    <AvatarDirectory people={people}>
       <ProjectHeader />
       <Outlet />
       {taskId ? (
@@ -47,6 +58,6 @@ function ProjectLayout() {
           }
         />
       ) : null}
-    </>
+    </AvatarDirectory>
   );
 }

@@ -1,5 +1,6 @@
 import { avatarColors, initialsOf } from "@/lib/design";
 import { cn } from "@/lib/cn";
+import { usePhoto } from "./avatar-directory";
 import { Tooltip } from "./tooltip";
 
 const sizes = {
@@ -26,8 +27,9 @@ export function Avatar({
     sizes[size],
     className,
   );
-  const face = user.avatar ? (
-    <img src={user.avatar} alt={tooltip ? (user.name ?? user.email) : ""} className={cn(base, "object-cover")} />
+  const photo = usePhoto(user);
+  const face = photo ? (
+    <img src={photo} alt={tooltip ? (user.name ?? user.email) : ""} className={cn(base, "object-cover")} />
   ) : (
     // Beside a visible name the initials are noise, so they're hidden from
     // screen readers; alone (tooltip), the avatar is an image named for the person.
