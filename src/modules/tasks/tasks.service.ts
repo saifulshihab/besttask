@@ -12,6 +12,7 @@ import type {
   CreateTaskInput,
   ListTasksQuery,
   UpdateTaskInput,
+  MoveTaskInput,
 } from "./tasks.schema.js";
 
 const userSelect = { id: true, email: true, name: true } as const;
@@ -300,6 +301,10 @@ export const update = async (
     data: {
       ...input,
       ...completionPatch(task.status, input.status),
+      // A new status puts the task at the end of that column.
+      ...(input.status !== undefined && input.status !== task.status
+        ? { position: await endPosition(task.projectId) }
+        : {}),
     },
     include: taskInclude,
   });
@@ -366,6 +371,82 @@ const completionPatch = (
   return {};
 };
 
+/** A position after every task in the project: the end of any column. */
+const endPosition = async (projectId: string) => {
+  const highest = await prisma.task.aggregate({
+    where: { projectId },
+    _max: { position: true },
+  });
+  return (highest._max.position ?? 0) + 1;
+};
+
+/**
+ * Drag and drop. Places the task in `status` before `beforeId` (or last), and
+ * renumbers that column so positions stay 1..n. Moving within a column is not
+ * recorded as activity; changing column is, as a status change.
+ */
+export const move = async (
+  actor: Actor,
+  taskId: string,
+  { status, beforeId }: MoveTaskInput,
+) => {
+  const { task, workspaceId } = await taskScope(actor.id, taskId, Role.MEMBER);
+
+  const order = await prisma.$transaction(async (tx) => {
+    // One move per project at a time, so concurrent drags cannot interleave
+    // their renumbering.
+    await tx.$queryRaw`SELECT id FROM "Project" WHERE id = ${task.projectId} FOR UPDATE`;
+    // Subtasks are ordered among their siblings; top-level tasks within
+    // their board column.
+    const column = await tx.task.findMany({
+      where: task.parentTaskId
+        ? { parentTaskId: task.parentTaskId, deletedAt: null, id: { not: taskId } }
+        : { projectId: task.projectId, parentTaskId: null, status, deletedAt: null, id: { not: taskId } },
+      orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+      select: { id: true, position: true },
+    });
+    const at = beforeId ? column.findIndex((t) => t.id === beforeId) : -1;
+    const ids = column.map((t) => t.id);
+    ids.splice(at === -1 ? ids.length : at, 0, taskId);
+
+    const positions = new Map(column.map((t) => [t.id, t.position]));
+    for (const [index, id] of ids.entries()) {
+      const position = index + 1;
+      if (id === taskId) {
+        await tx.task.update({
+          where: { id },
+          data: {
+            position,
+            ...(status !== task.status
+              ? { status, ...completionPatch(task.status, status) }
+              : {}),
+          },
+        });
+      } else if (positions.get(id) !== position) {
+        await tx.task.update({ where: { id }, data: { position } });
+      }
+    }
+    return ids.map((id, index) => ({ id, position: index + 1 }));
+  });
+
+  if (status !== task.status)
+    await recordActivity({
+      projectId: task.projectId,
+      workspaceId,
+      actorId: actor.id,
+      entityType: "task",
+      entityId: taskId,
+      action: "task.status_changed",
+      metadata: { title: task.title, from: task.status, to: status },
+    });
+
+  const updated = await prisma.task.findUniqueOrThrow({
+    where: { id: taskId },
+    include: taskInclude,
+  });
+  return { task: present(updated), order };
+};
+
 export const setStatus = async (
   actor: Actor,
   taskId: string,
@@ -378,7 +459,11 @@ export const setStatus = async (
 
   const updated = await prisma.task.update({
     where: { id: taskId },
-    data: { status, ...completionPatch(task.status, status) },
+    data: {
+      status,
+      ...completionPatch(task.status, status),
+      position: await endPosition(task.projectId),
+    },
     include: taskInclude,
   });
 

@@ -10,6 +10,7 @@ import {
   taskLabelParams,
   updateAssigneeSchema,
   updateStatusSchema,
+  moveTaskSchema,
   updateTaskSchema,
 } from "./tasks.schema.js";
 import * as taskService from "./tasks.service.js";
@@ -46,6 +47,12 @@ export const tasksController = {
     { params: taskIdParams, body: updateTaskSchema },
     ({ params, body, req }) =>
       taskService.update(actorOf(req), params.taskId, body),
+  ),
+
+  move: route(
+    { params: taskIdParams, body: moveTaskSchema },
+    ({ params, body, req }) =>
+      taskService.move(actorOf(req), params.taskId, body),
   ),
 
   setStatus: route(

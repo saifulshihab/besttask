@@ -11,7 +11,7 @@ import type { ProjectDetail, Task } from "@/lib/types";
 import { LabelChip, PriorityChip, StatusDot } from "./task-badges";
 import { Checkbox } from "@/components/ui/checkbox";
 
-export const PAGE_SIZE = 10;
+export const PAGE_SIZE = 25;
 const grid = "grid grid-cols-[minmax(0,1fr)_150px_130px_100px_100px] gap-2";
 
 /** Prototype list view: a paged table of top-level tasks, subtasks optional. */

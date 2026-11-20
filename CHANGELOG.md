@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Board redesign:
+  - Each column is a rounded lane, with the status dot, name and count in its header, a column menu, and Add task inside the lane.
+  - Cards are white on the lane with a soft shadow. They show the ID and a quick-action menu on top (move, assign to me, unassign, delete), a title cut at two lines, labels, and a footer with priority, due date ("Overdue", "Today" or "Tomorrow"), a subtask progress ring, comments and the assignee.
+  - Done and Cancelled cards show an icon instead of strikethrough.
+  - While dragging, the lane under the card takes a tint of its status.
+  - The collapsed Cancelled column uses the same lane style.
+- Activity status pills now adapt to dark mode.
+- The list view shows 25 tasks per page (was 10).
+- Manual card order: drag a card up or down within a column, or to a spot in another column, and the order is saved for everyone on the project. New tasks join at the end of their column, and changing a task's status any other way (task panel, card menu, phone) also puts it at the end. "Manual" is the new default sort for the board and list; Priority, Newest, Due date and Title remain in the Sort menu, and while one of those is chosen, dragging only changes the column.
+- API: `POST /tasks/:taskId/move` with `{ status, beforeId }`. Reordering within a column is not recorded as activity; moving to another column is, as a status change.
+
+### Fixed
+
+- Profile photos now show wherever a person appears (board cards, list rows, comments, activity), filled in from member lists the app already loads.
+
 ## 2026-11-18 — New web app and backend upgrade
 
 The web app was rebuilt with Vite, React 19 and TanStack Router to match the

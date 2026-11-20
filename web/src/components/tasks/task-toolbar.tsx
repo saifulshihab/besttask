@@ -5,7 +5,7 @@ import { SearchClear } from "@/components/ui/field";
 import { MenuPopup, MenuRoot, MenuTrigger } from "@/components/ui/menu";
 import { cn } from "@/lib/cn";
 import { PRIORITIES, STATUSES, STATUS_ORDER } from "@/lib/design";
-import { hasFilters, SORTS, type SortId, type TaskSearch } from "@/lib/task-filters";
+import { DEFAULT_SORT, hasFilters, SORTS, type SortId, type TaskSearch } from "@/lib/task-filters";
 import type { Label, Priority } from "@/lib/types";
 
 type ArrayKey = "status" | "priority" | "assignee" | "label";
@@ -102,7 +102,7 @@ export function TaskToolbar({
         {filtering ? `${shown} of ${total} tasks` : `${total} task${total === 1 ? "" : "s"}`}
       </span>
       {beforeSort}
-      <SortMenu value={search.sort ?? "priority"} onChange={(sort) => onChange({ sort: sort === "priority" ? undefined : sort })} />
+      <SortMenu value={search.sort ?? DEFAULT_SORT} onChange={(sort) => onChange({ sort: sort === DEFAULT_SORT ? undefined : sort })} />
       {afterSort}
     </div>
   );

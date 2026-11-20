@@ -100,12 +100,15 @@ export const useMoveTask = (workspaceId: string, projectId: string) => {
       await qc.cancelQueries({ queryKey: tasksKey });
       const previous = qc.getQueryData<Task[]>(tasksKey);
       const from = previous?.find((t) => t.id === id)?.status;
+      // The API puts a task whose status changes at the end of its new column.
+      const end = Math.max(0, ...(previous ?? []).map((t) => t.position)) + 1;
       qc.setQueryData<Task[]>(tasksKey, (tasks) =>
         tasks?.map((t) =>
           t.id === id
             ? {
                 ...t,
                 status,
+                position: t.status === status ? t.position : end,
                 completedAt: status === "DONE" ? new Date().toISOString() : null,
               }
             : t,
@@ -121,6 +124,63 @@ export const useMoveTask = (workspaceId: string, projectId: string) => {
         tasks?.map((t) => (t.id === task.id ? task : t)),
       );
       // The sidebar shows open-task counts; only crossing open/closed changes them.
+      if (context?.from && isOpen(context.from) !== isOpen(status))
+        void qc.invalidateQueries({ queryKey: keys.projects(workspaceId) });
+    },
+  });
+};
+
+/**
+ * Drag and drop: put a task in `status` just before `beforeId` (or last). The
+ * board shows the new order at once; the server's renumbered column follows.
+ */
+export const useReorderTask = (workspaceId: string, projectId: string) => {
+  const qc = useQueryClient();
+  const tasksKey = keys.projectTasks(projectId);
+  return useMutation({
+    mutationFn: ({ id, status, beforeId }: { id: string; status: TaskStatus; beforeId: string | null }) =>
+      api<{ task: Task; order: { id: string; position: number }[] }>(`/tasks/${id}/move`, {
+        method: "POST",
+        body: { status, beforeId },
+      }),
+    onMutate: async ({ id, status, beforeId }) => {
+      await qc.cancelQueries({ queryKey: tasksKey });
+      const previous = qc.getQueryData<Task[]>(tasksKey);
+      const moving = previous?.find((t) => t.id === id);
+      if (!previous || !moving) return { previous, from: moving?.status };
+      // Same renumbering as the server: the column in order, the task inserted.
+      const column = previous
+        .filter((t) => t.status === status && !t.parentTaskId && t.id !== id)
+        .sort((a, b) => a.position - b.position || a.createdAt.localeCompare(b.createdAt))
+        .map((t) => t.id);
+      const at = beforeId ? column.indexOf(beforeId) : -1;
+      column.splice(at === -1 ? column.length : at, 0, id);
+      const rank = new Map(column.map((taskId, i) => [taskId, i + 1]));
+      qc.setQueryData<Task[]>(tasksKey, (tasks) =>
+        tasks?.map((t) =>
+          t.id === id
+            ? {
+                ...t,
+                status,
+                position: rank.get(id)!,
+                completedAt:
+                  status === t.status ? t.completedAt : status === "DONE" ? new Date().toISOString() : null,
+              }
+            : rank.has(t.id)
+              ? { ...t, position: rank.get(t.id)! }
+              : t,
+        ),
+      );
+      return { previous, from: moving.status };
+    },
+    onError: (_error, _vars, context) => {
+      if (context?.previous) qc.setQueryData(tasksKey, context.previous);
+    },
+    onSuccess: ({ task, order }, { status }, context) => {
+      const rank = new Map(order.map((o) => [o.id, o.position]));
+      qc.setQueryData<Task[]>(tasksKey, (tasks) =>
+        tasks?.map((t) => (t.id === task.id ? task : rank.has(t.id) ? { ...t, position: rank.get(t.id)! } : t)),
+      );
       if (context?.from && isOpen(context.from) !== isOpen(status))
         void qc.invalidateQueries({ queryKey: keys.projects(workspaceId) });
     },

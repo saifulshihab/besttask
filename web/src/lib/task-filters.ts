@@ -11,6 +11,7 @@ const STATUS = z.enum(["BACKLOG", "TODO", "IN_PROGRESS", "IN_REVIEW", "DONE", "C
 const PRIORITY = z.enum(["URGENT", "HIGH", "MEDIUM", "LOW"]);
 
 export const SORTS = [
+  { id: "manual", name: "Manual" },
   { id: "priority", name: "Priority" },
   { id: "newest", name: "Newest" },
   { id: "due", name: "Due date" },
@@ -25,7 +26,7 @@ export const taskSearchSchema = z.object({
   /** "me" and/or "none" (unassigned), as in the prototype. */
   assignee: z.array(z.enum(["me", "none"])).optional().catch(undefined),
   label: z.array(z.string()).optional().catch(undefined),
-  sort: z.enum(["priority", "newest", "due", "title"]).optional().catch(undefined),
+  sort: z.enum(["manual", "priority", "newest", "due", "title"]).optional().catch(undefined),
   /** The task open in the detail panel. */
   task: z.string().optional().catch(undefined),
 });
@@ -51,8 +52,15 @@ export const matchesFilters = (task: Task, s: TaskSearch, meId: string) => {
 
 const newestFirst = (a: Task, b: Task) => b.createdAt.localeCompare(a.createdAt);
 
-export const sortTasks = (tasks: Task[], sort: SortId = "priority") =>
+/**
+ * Without a chosen sort, tasks follow the board's manual order: drag and drop
+ * arranges it, and new tasks join at the end of their column.
+ */
+export const DEFAULT_SORT: SortId = "manual";
+
+export const sortTasks = (tasks: Task[], sort: SortId = DEFAULT_SORT) =>
   [...tasks].sort((a, b) => {
+    if (sort === "manual") return a.position - b.position || a.createdAt.localeCompare(b.createdAt);
     if (sort === "priority")
       return PRIORITIES[a.priority].rank - PRIORITIES[b.priority].rank || newestFirst(a, b);
     if (sort === "newest") return newestFirst(a, b);
@@ -77,3 +85,13 @@ export const isOverdue = (task: Task, today = todayString()) =>
   task.dueDate.slice(0, 10) < today &&
   task.status !== "DONE" &&
   task.status !== "CANCELLED";
+
+/** Due today or tomorrow and still open (overdue tasks are not "soon"). */
+export const isDueSoon = (task: Task, today = todayString()) => {
+  if (!task.dueDate || task.status === "DONE" || task.status === "CANCELLED") return false;
+  const due = task.dueDate.slice(0, 10);
+  const [y, m, d] = today.split("-").map(Number);
+  const t = new Date(y!, m! - 1, d! + 1);
+  const tomorrow = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+  return due >= today && due <= tomorrow;
+};

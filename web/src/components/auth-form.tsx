@@ -84,10 +84,11 @@ export function AuthForm({ mode, next }: { mode: Mode; next?: string }) {
             <Field label="Full name" error={fieldError("name")}>
               <Input
                 autoComplete="name"
+                autoFocus
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Maya Rahman"
+                placeholder="e.g. Safwan Ayaan"
               />
             </Field>
           ) : null}
@@ -95,7 +96,7 @@ export function AuthForm({ mode, next }: { mode: Mode; next?: string }) {
             <Input
               type="email"
               autoComplete="email"
-              autoFocus
+              autoFocus={mode === "login"}
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}

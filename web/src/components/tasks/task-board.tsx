@@ -1,4 +1,5 @@
 import {
+  closestCorners,
   DndContext,
   DragOverlay,
   PointerSensor,
@@ -7,18 +8,25 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
+import { ChevronLeft, ChevronRight, Ellipsis, Plus } from "lucide-react";
+import { useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import { MenuItem, MenuPopup, MenuRoot, MenuTrigger } from "@/components/ui/menu";
 import { toastError } from "@/lib/toast";
 import { cn } from "@/lib/cn";
 import { STATUSES, STATUS_ORDER } from "@/lib/design";
-import { useCreateTask, useMoveTask } from "@/lib/mutations";
+import { useCreateTask, useMoveTask, useReorderTask } from "@/lib/mutations";
+import { meQuery } from "@/lib/queries";
 import { todayString } from "@/lib/task-filters";
+import { useDeleteTask, useUpdateTask } from "@/lib/task-mutations";
 import type { ProjectDetail, Task, TaskStatus } from "@/lib/types";
 import { StatusDot } from "./task-badges";
-import { TaskCard, TaskCardPreview, type SubtaskProgress } from "./task-card";
+import { TaskCard, TaskCardPreview, type CardActions, type SubtaskProgress } from "./task-card";
 
 const NO_PROGRESS: SubtaskProgress = { done: 0, total: 0 };
 
@@ -28,6 +36,7 @@ export function TaskBoard({
   allTasks,
   visible,
   filtering,
+  manual,
   selectedId,
   onOpen,
 }: {
@@ -38,12 +47,20 @@ export function TaskBoard({
   /** Filtered and sorted top-level tasks to show. */
   visible: Task[];
   filtering: boolean;
+  /** The board is in manual order: dragging also reorders within a column. */
+  manual: boolean;
   selectedId?: string;
   onOpen: (taskId: string) => void;
 }) {
   const move = useMoveTask(workspaceId, project.id);
+  const reorder = useReorderTask(workspaceId, project.id);
+  const update = useUpdateTask(workspaceId, project.id);
+  const remove = useDeleteTask(workspaceId, project.id);
+  const { data: me } = useSuspenseQuery(meQuery);
   const editable = !project.archivedAt;
-  const [dragging, setDragging] = useState<Task | null>(null);
+  // While dragging, a working copy of the board (task ids per column) lets
+  // cards make room as the dragged card crosses columns.
+  const [drag, setDrag] = useState<{ task: Task; layout: Layout } | null>(null);
   const [addingIn, setAddingIn] = useState<TaskStatus | null>(null);
   const [cancelledOpen, setCancelledOpen] = useState(false);
   const today = todayString();
@@ -72,6 +89,16 @@ export function TaskBoard({
     return { progress, totals };
   }, [allTasks]);
 
+  const byId = useMemo(() => new Map(visible.map((t) => [t.id, t])), [visible]);
+  const baseLayout = useMemo(
+    () => Object.fromEntries(columns.map((s) => [s, visible.filter((t) => t.status === s).map((t) => t.id)])) as Layout,
+    [visible, columns],
+  );
+  const layout = drag?.layout ?? baseLayout;
+  /** The column an id belongs to: a column id itself, or the column holding that card. */
+  const columnOf = (id: string, of: Layout = layout) =>
+    (columns as string[]).includes(id) ? (id as TaskStatus) : columns.find((s) => of[s]?.includes(id));
+
   const moveTo = (task: Task, status: TaskStatus) => {
     if (task.status === status) return;
     if (status === "CANCELLED") setCancelledOpen(true);
@@ -81,24 +108,78 @@ export function TaskBoard({
     );
   };
 
-  const onDragStart = ({ active }: DragStartEvent) =>
-    setDragging(visible.find((t) => t.id === active.id) ?? null);
-  const onDragEnd = ({ active, over }: DragEndEvent) => {
-    setDragging(null);
-    const task = visible.find((t) => t.id === active.id);
-    if (task && over) moveTo(task, over.id as TaskStatus);
+  /** The card menu: move, assign to yourself or unassign, delete (with Undo). */
+  const actionsFor = (task: Task): CardActions => ({
+    statuses: columns,
+    onMove: (status) => moveTo(task, status),
+    onAssignToMe:
+      task.assigneeId !== me.id
+        ? () => update.mutate({ id: task.id, patch: { assigneeId: me.id } })
+        : undefined,
+    onUnassign: task.assigneeId
+      ? () => update.mutate({ id: task.id, patch: { assigneeId: null } })
+      : undefined,
+    onDelete: () => remove.mutate(task),
+  });
+
+  const onDragStart = ({ active }: DragStartEvent) => {
+    const task = byId.get(String(active.id));
+    if (task) setDrag({ task, layout: baseLayout });
+  };
+
+  // Crossing into another column: move the card into it, where it is hovered.
+  const onDragOver = ({ active, over }: DragOverEvent) => {
+    if (!drag || !over) return;
+    const id = String(active.id);
+    const from = columnOf(id, drag.layout);
+    const to = columnOf(String(over.id), drag.layout);
+    if (!from || !to || from === to) return;
+    const target = drag.layout[to];
+    const at = target.indexOf(String(over.id));
+    const next = { ...drag.layout, [from]: drag.layout[from].filter((x) => x !== id), [to]: [...target] };
+    next[to].splice(at === -1 ? target.length : at, 0, id);
+    setDrag({ ...drag, layout: next });
+  };
+
+  const onDragEnd = ({ over }: DragEndEvent) => {
+    const current = drag;
+    setDrag(null);
+    if (!current || !over) return;
+    const { task } = current;
+    const to = columnOf(String(over.id), current.layout);
+    if (!to) return;
+    let ids = current.layout[to];
+    const overId = String(over.id);
+    if (ids.includes(overId) && overId !== task.id)
+      ids = arrayMove(ids, ids.indexOf(task.id), ids.indexOf(overId));
+    if (!manual) {
+      // Another sort decides the order: dropping only changes the column.
+      moveTo(task, to);
+      return;
+    }
+    const beforeId = ids[ids.indexOf(task.id) + 1] ?? null;
+    const original = baseLayout[task.status];
+    const unchanged = to === task.status && (original[original.indexOf(task.id) + 1] ?? null) === beforeId;
+    if (unchanged) return;
+    if (to === "CANCELLED") setCancelledOpen(true);
+    reorder.mutate(
+      { id: task.id, status: to, beforeId },
+      { onError: (error) => toastError(error, `Couldn’t move ${task.key}`) },
+    );
   };
 
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={closestCorners}
       onDragStart={onDragStart}
+      onDragOver={onDragOver}
       onDragEnd={onDragEnd}
-      onDragCancel={() => setDragging(null)}
+      onDragCancel={() => setDrag(null)}
     >
-      <div className="flex min-h-[560px] flex-1 gap-3.5 overflow-x-auto bg-row-hover px-7 pt-[18px] pb-7">
+      <div className="flex min-h-[560px] flex-1 gap-2.5 overflow-x-auto bg-canvas px-6 pt-[18px] pb-7">
         {columns.map((status) => {
-          const cards = visible.filter((t) => t.status === status);
+          const cards = (layout[status] ?? []).map((id) => byId.get(id)).filter((t): t is Task => !!t);
           const props = {
             status,
             cards,
@@ -127,6 +208,7 @@ export function TaskBoard({
               workspaceId={workspaceId}
               project={project}
             >
+              <SortableContext items={layout[status] ?? []} strategy={verticalListSortingStrategy}>
               {cards.map((task) => (
                 <TaskCard
                   key={task.id}
@@ -136,23 +218,26 @@ export function TaskBoard({
                   today={today}
                   selected={task.id === selectedId}
                   draggable={editable}
+                  sortable={manual}
                   onOpen={() => onOpen(task.id)}
                   onMoveBy={(step) => {
                     const next = columns[columns.indexOf(task.status) + step];
                     if (next) moveTo(task, next);
                   }}
+                  actions={editable ? actionsFor(task) : undefined}
                 />
               ))}
+              </SortableContext>
             </Column>
           );
         })}
       </div>
       <DragOverlay dropAnimation={null}>
-        {dragging ? (
+        {drag ? (
           <TaskCardPreview
-            task={dragging}
+            task={drag.task}
             fields={project.cardFields}
-            progress={progress.get(dragging.id) ?? NO_PROGRESS}
+            progress={progress.get(drag.task.id) ?? NO_PROGRESS}
             today={today}
           />
         ) : null}
@@ -160,6 +245,9 @@ export function TaskBoard({
     </DndContext>
   );
 }
+
+/** Task ids per column, in display order. */
+type Layout = Record<TaskStatus, string[]>;
 
 interface ColumnBase {
   status: TaskStatus;
@@ -187,6 +275,30 @@ const emptyTitle = (status: TaskStatus, filtering: boolean) =>
         ? "No tasks in progress"
         : "No tasks here";
 
+/**
+ * Lanes share one neutral background; while a card is dragged over one, it
+ * takes a faint tint of its status and a dashed outline shows where it lands.
+ */
+const laneStyle = (status: TaskStatus, over: boolean): CSSProperties | undefined => {
+  if (!over) return undefined;
+  const hue = STATUSES[status].hue;
+  return {
+    background: `color-mix(in srgb, ${hue} 9%, var(--color-lane))`,
+    outline: `2px dashed color-mix(in srgb, ${hue} 55%, transparent)`,
+    outlineOffset: "-2px",
+  };
+};
+
+/** The column title: the status dot and name. */
+function StatusPill({ status }: { status: TaskStatus }) {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap pl-1.5 text-ink">
+      <StatusDot status={status} />
+      <h2 className="m-0 text-sm font-semibold">{STATUSES[status].name}</h2>
+    </span>
+  );
+}
+
 function Column({
   children,
   collapsible,
@@ -209,51 +321,68 @@ function Column({
 }) {
   const { status, cards, total, wipLimit, filtering, editable } = base;
   const { setNodeRef, isOver } = useDroppable({ id: status, disabled: !editable });
+  const navigate = useNavigate();
   const name = STATUSES[status].name;
   const overWip = wipLimit > 0 && total > wipLimit;
+  const canManage = project.role !== "MEMBER";
+  const iconButton =
+    "flex size-7 items-center justify-center rounded-md text-muted hover:bg-hover hover:text-ink data-[popup-open]:bg-hover";
 
   return (
     <section
       ref={setNodeRef}
       aria-label={name}
-      className={cn(
-        "-m-1 flex min-w-[230px] flex-1 basis-0 flex-col gap-2.5 rounded-xl p-1",
-        isOver && "bg-accent-soft outline-2 outline-accent outline-dashed",
-      )}
+      style={laneStyle(status, isOver)}
+      className="flex min-w-[208px] flex-1 basis-0 flex-col gap-2 rounded-2xl bg-lane p-2 transition-colors"
     >
-      <div className="flex h-8 items-center gap-2">
-        <StatusDot status={status} />
-        <h2 className="m-0 text-sm font-semibold">{name}</h2>
-        <span className={cn("text-xs", overWip ? "font-semibold text-danger" : "text-muted")}>
+      <div className="flex h-9 items-center gap-1.5 pr-0.5 pl-1">
+        <StatusPill status={status} />
+        <span
+          className={cn("shrink-0 text-xs whitespace-nowrap tabular-nums", overWip ? "font-semibold text-danger" : "font-medium text-muted")}
+          title={wipLimit > 0 ? `Work-in-progress limit: ${wipLimit}` : undefined}
+        >
           {countText(base)}
         </span>
         <span className="flex-1" />
         {collapsible ? (
-          <button
-            type="button"
-            aria-label={`Collapse ${name} column`}
-            onClick={onCollapse}
-            className="flex size-7 items-center justify-center rounded-sm text-muted hover:bg-hover"
-          >
+          <button type="button" aria-label={`Collapse ${name} column`} onClick={onCollapse} className={iconButton}>
             <ChevronLeft size={15} aria-hidden />
           </button>
         ) : null}
         {editable ? (
-          <button
-            type="button"
-            aria-label={`Add task to ${name}`}
-            onClick={onStartAdd}
-            className="flex size-7 items-center justify-center rounded-sm text-muted hover:bg-hover"
-          >
-            <Plus size={15} aria-hidden />
-          </button>
+          <>
+            <MenuRoot>
+              <MenuTrigger aria-label={`${name} column options`} className={iconButton}>
+                <Ellipsis size={15} aria-hidden />
+              </MenuTrigger>
+              <MenuPopup align="end">
+                <MenuItem onClick={onStartAdd}>Add task</MenuItem>
+                {canManage ? (
+                  <MenuItem
+                    onClick={() =>
+                      void navigate({
+                        to: "/w/$workspaceId/p/$projectId/settings",
+                        params: { workspaceId, projectId: project.id },
+                        hash: "board",
+                      })
+                    }
+                  >
+                    {status === "IN_PROGRESS" ? "Set work-in-progress limit" : "Board settings"}
+                  </MenuItem>
+                ) : null}
+              </MenuPopup>
+            </MenuRoot>
+            <button type="button" aria-label={`Add task to ${name}`} onClick={onStartAdd} className={iconButton}>
+              <Plus size={15} aria-hidden />
+            </button>
+          </>
         ) : null}
       </div>
 
       {overWip ? (
         <span
           role="status"
-          className="rounded-md border border-danger-line bg-danger-soft px-2.5 py-1.5 text-xs text-danger-ink"
+          className="rounded-lg border border-danger-line bg-danger-soft px-2.5 py-1.5 text-xs text-danger-ink"
         >
           Over the WIP limit of {wipLimit}. Finish something before starting more.
         </span>
@@ -262,27 +391,20 @@ function Column({
       {children}
 
       {cards.length === 0 && !adding ? (
-        <div className="flex flex-col items-center gap-1 rounded-lg border-[1.5px] border-dashed border-line-strong px-4 py-5 text-center">
-          <span className="text-sm font-medium text-ink-2">{emptyTitle(status, filtering)}</span>
-          {editable ? (
-            <span className="text-xs text-muted">Drag a card here or add one.</span>
-          ) : null}
-        </div>
+        <p className="m-0 px-2 py-5 text-center text-sm text-muted">
+          {emptyTitle(status, filtering)}
+          {editable ? <span className="block text-xs text-faint">Drop a card here or add one.</span> : null}
+        </p>
       ) : null}
 
       {editable ? (
         adding ? (
-          <InlineAdd
-            status={status}
-            workspaceId={workspaceId}
-            project={project}
-            onDone={onStopAdd}
-          />
+          <InlineAdd status={status} workspaceId={workspaceId} project={project} onDone={onStopAdd} />
         ) : (
           <button
             type="button"
             onClick={onStartAdd}
-            className="flex h-9 items-center gap-1.5 rounded-md px-2 text-left text-sm text-muted hover:bg-hover"
+            className="flex h-9 items-center gap-1.5 rounded-lg px-2 text-left text-sm text-muted hover:bg-card hover:text-ink hover:shadow-card"
           >
             <Plus size={14} aria-hidden />
             Add task
@@ -305,20 +427,19 @@ function CollapsedColumn({
     <section
       ref={setNodeRef}
       aria-label={name}
-      className={cn(
-        "flex w-11 shrink-0 flex-col items-center gap-2.5 rounded-lg pt-1",
-        isOver ? "bg-accent-soft outline-2 outline-accent outline-dashed" : "bg-menu-hover",
-      )}
+      style={laneStyle(status, isOver)}
+      className="flex w-12 shrink-0 flex-col items-center gap-3 rounded-2xl bg-lane py-2 transition-colors"
     >
       <button
         type="button"
         aria-label={`Expand ${name} column`}
         onClick={onExpand}
-        className="flex size-9 items-center justify-center rounded-sm text-muted hover:bg-hover"
+        className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-hover hover:text-ink"
       >
         <ChevronRight size={15} aria-hidden />
       </button>
-      <span className="text-xs font-semibold text-muted [writing-mode:vertical-rl]">
+      <StatusDot status={status} />
+      <span className="text-xs font-semibold text-ink-2 [writing-mode:vertical-rl]">
         {name} · {total}
       </span>
     </section>
@@ -361,7 +482,7 @@ function InlineAdd({
   return (
     <form
       onSubmit={submit}
-      className="flex flex-col gap-2 rounded-lg border border-accent bg-canvas p-2.5"
+      className="flex flex-col gap-2 rounded-xl border border-accent bg-card p-2.5 shadow-card"
     >
       <label className="flex flex-col gap-1">
         <span className="sr-only">New task title in {name}</span>
@@ -373,7 +494,7 @@ function InlineAdd({
             if (e.key === "Escape") onDone();
           }}
           placeholder="Task title, then Enter"
-          className="border-0 px-0.5 py-1 text-base text-ink outline-none"
+          className="border-0 bg-transparent px-0.5 py-1 text-base text-ink outline-none"
         />
       </label>
       <div className="flex justify-end gap-1.5">

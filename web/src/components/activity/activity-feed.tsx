@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { describe, type ActivityEntry } from "@/lib/activity";
-import { STATUSES } from "@/lib/design";
+import { STATUSES, statusPillColors } from "@/lib/design";
 import { dayHeading, relativeTime } from "@/lib/format";
 import { ACTIVITY_PAGE_SIZE, activityQuery, projectsQuery, type ActivityFilters } from "@/lib/queries";
 
@@ -156,7 +156,7 @@ export function ActivityFeed({
                             {i > 0 ? <span aria-hidden>→</span> : null}
                             <span
                               className="rounded-full px-2 py-0.5"
-                              style={{ background: STATUSES[status].bg, color: STATUSES[status].fg }}
+                              style={statusPillColors(status)}
                             >
                               {STATUSES[status].name}
                             </span>

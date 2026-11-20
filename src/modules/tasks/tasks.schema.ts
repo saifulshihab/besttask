@@ -35,6 +35,16 @@ export const updateTaskSchema = z
   .partial()
   .refine((data) => Object.keys(data).length > 0, "Provide at least one field");
 
+/**
+ * Drag and drop: put the task in `status`, just before `beforeId` (a task in
+ * that column), or at the end of the column when `beforeId` is null. Placing
+ * relative to a card keeps the drop right even when the board is filtered.
+ */
+export const moveTaskSchema = z.object({
+  status: z.enum(TaskStatus),
+  beforeId: z.uuid().nullable(),
+});
+
 export const updateStatusSchema = z.object({
   status: z.enum(TaskStatus),
 });
@@ -92,4 +102,5 @@ export const listTasksQuery = paginationSchema.extend({
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
+export type MoveTaskInput = z.infer<typeof moveTaskSchema>;
 export type ListTasksQuery = z.infer<typeof listTasksQuery>;

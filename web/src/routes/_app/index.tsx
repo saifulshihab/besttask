@@ -4,8 +4,9 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { lastWorkspace } from "@/lib/last-visited";
-import { useCreateWorkspace } from "@/lib/mutations";
-import { workspacesQuery } from "@/lib/queries";
+import { useQuery } from "@tanstack/react-query";
+import { signOut, useCreateWorkspace } from "@/lib/mutations";
+import { meQuery, workspacesQuery } from "@/lib/queries";
 
 /** "/" opens the last-used workspace, else the first one, else onboarding. */
 export const Route = createFileRoute("/_app/")({
@@ -27,6 +28,7 @@ export const Route = createFileRoute("/_app/")({
 function FirstWorkspace() {
   const navigate = useNavigate();
   const create = useCreateWorkspace();
+  const { data: me } = useQuery(meQuery);
   const [name, setName] = useState("");
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -44,9 +46,15 @@ function FirstWorkspace() {
         className="flex w-full max-w-[440px] flex-col gap-3.5 rounded-xl border border-line bg-canvas p-7"
       >
         <div className="flex flex-col gap-1">
-          <h1 className="m-0 text-xl font-bold">Create your first workspace</h1>
+          <h1 className="m-0 text-xl font-bold">You’re not in any workspace yet</h1>
           <p className="m-0 text-sm leading-normal text-muted">
-            A workspace holds your projects and the people working on them. You’ll be its owner.
+            Create one to get started — you’ll be its owner. Or ask a teammate to add you
+            {me ? (
+              <>
+                {" "}using <span className="font-medium text-ink">{me.email}</span>
+              </>
+            ) : null}
+            .
           </p>
         </div>
         <Field label="Workspace name" error={create.error?.message}>
@@ -66,6 +74,16 @@ function FirstWorkspace() {
         >
           Create workspace
         </Button>
+        <p className="m-0 border-t border-line pt-3.5 text-center text-sm text-muted">
+          Wrong account?{" "}
+          <button
+            type="button"
+            onClick={() => void signOut()}
+            className="cursor-pointer border-0 bg-transparent p-0 font-semibold text-danger hover:underline"
+          >
+            Sign out
+          </button>
+        </p>
       </form>
     </div>
   );

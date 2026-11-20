@@ -6,14 +6,27 @@ import type { Priority, Role, TaskStatus } from "./types";
  */
 export const STATUSES: Record<
   TaskStatus,
-  { name: string; dot: string; bg: string; fg: string }
+  { name: string; dot: string; bg: string; fg: string; hue: string }
 > = {
-  BACKLOG: { name: "Backlog", dot: "border-2 border-dashed border-[#78716C]", bg: "#F5F5F4", fg: "#44403C" },
-  TODO: { name: "To do", dot: "border-2 border-[#1D4ED8]", bg: "#DBEAFE", fg: "#1E3A8A" },
-  IN_PROGRESS: { name: "In progress", dot: "border-2 border-[#B45309] bg-[#FDE68A]", bg: "#FEF3C7", fg: "#78350F" },
-  IN_REVIEW: { name: "In review", dot: "border-2 border-[#7C3AED] bg-[#DDD6FE]", bg: "#EDE9FE", fg: "#4C1D95" },
-  DONE: { name: "Done", dot: "border-2 border-[#15803D] bg-[#15803D]", bg: "#DCFCE7", fg: "#14532D" },
-  CANCELLED: { name: "Cancelled", dot: "border-2 border-[#78716C] bg-[#D6D3D1]", bg: "#F5F5F4", fg: "#57534E" },
+  BACKLOG: { name: "Backlog", dot: "border-2 border-dashed border-[#78716C]", bg: "#E7E5E4", fg: "#44403C", hue: "#78716C" },
+  TODO: { name: "To do", dot: "border-2 border-[#1D4ED8]", bg: "#DBEAFE", fg: "#1E3A8A", hue: "#1D4ED8" },
+  IN_PROGRESS: { name: "In progress", dot: "border-2 border-[#B45309] bg-[#FDE68A]", bg: "#FEF3C7", fg: "#78350F", hue: "#B45309" },
+  IN_REVIEW: { name: "In review", dot: "border-2 border-[#7C3AED] bg-[#DDD6FE]", bg: "#EDE9FE", fg: "#4C1D95", hue: "#7C3AED" },
+  DONE: { name: "Done", dot: "border-2 border-[#15803D] bg-[#15803D]", bg: "#DCFCE7", fg: "#14532D", hue: "#15803D" },
+  CANCELLED: { name: "Cancelled", dot: "border-2 border-[#78716C] bg-[#D6D3D1]", bg: "#E7E5E4", fg: "#57534E", hue: "#78716C" },
+};
+
+/**
+ * A status pill's colors (board column headers, activity moves): the
+ * prototype's tint and ink in light mode, the status hue blended into the
+ * theme in dark mode (color-scheme: dark), so it stays readable.
+ */
+export const statusPillColors = (status: TaskStatus) => {
+  const s = STATUSES[status];
+  return {
+    background: `light-dark(${s.bg}, color-mix(in srgb, ${s.hue} 26%, var(--color-canvas)))`,
+    color: `light-dark(${s.fg}, color-mix(in srgb, ${s.hue} 40%, var(--color-ink)))`,
+  };
 };
 
 export const STATUS_ORDER: TaskStatus[] = [

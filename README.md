@@ -191,6 +191,7 @@ except register, login, and refresh.
 - `GET /workspaces/:workspaceId/tasks`
 - `GET /tasks/:taskId`, `PATCH /tasks/:taskId`, `DELETE /tasks/:taskId`
 - `PATCH /tasks/:taskId/status`, `PATCH /tasks/:taskId/assignee`
+- `POST /tasks/:taskId/move` (drag and drop: `{ status, beforeId }` places the task before that card, or last when `beforeId` is null)
 - `GET /tasks/:taskId/subtasks`
 - `POST /tasks/:taskId/labels`, `DELETE /tasks/:taskId/labels/:labelId`
 

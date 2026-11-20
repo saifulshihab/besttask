@@ -9,13 +9,7 @@ import {
   projectQuery,
   projectTasksQuery,
 } from "@/lib/queries";
-import {
-  hasFilters,
-  matchesFilters,
-  sortTasks,
-  taskSearchSchema,
-  type TaskSearch,
-} from "@/lib/task-filters";
+import { DEFAULT_SORT, hasFilters, matchesFilters, sortTasks, taskSearchSchema, type TaskSearch } from "@/lib/task-filters";
 
 export const Route = createFileRoute("/_app/w/$workspaceId/p/$projectId/board")({
   validateSearch: taskSearchSchema,
@@ -61,9 +55,8 @@ function BoardPage() {
         allTasks={tasks}
         visible={visible}
         filtering={hasFilters(search)}
+        manual={(search.sort ?? DEFAULT_SORT) === "manual"}
         selectedId={search.task}
-        // The task panel arrives with the task-detail screen; the card is
-        // highlighted and the URL is shareable in the meantime.
         onOpen={(task) => update({ task })}
       />
     </>

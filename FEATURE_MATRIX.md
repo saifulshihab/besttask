@@ -118,7 +118,7 @@ All allowed task actions below apply to accessible, active projects. Admins/memb
 | T05 | Edit task title | ✅ | ✅ | ✅ | Includes tasks created by other users. |
 | T06 | Edit task description | ✅ | ✅ | ✅ | Autosave behavior shown. |
 | T07 | Change task status | ✅ | ✅ | ✅ | Backlog, To do, In progress, In review, Done, Cancelled. |
-| T08 | Move task between board columns by drag and drop | ✅ | ✅ | ✅ | Same permission as changing status. |
+| T08 | Move task between board columns by drag and drop | ✅ | ✅ | ✅ | Same permission as changing status. Dragging also reorders cards within a column; the order is shared by everyone on the project, and new tasks join at the end of their column. |
 | T09 | Change task priority | ✅ | ✅ | ✅ | Urgent, High, Medium, Low. |
 | T10 | Assign or reassign task to an eligible project user | ✅ | ✅ | ✅ | Picker includes active assigned project users and the workspace owner; excludes deactivated and unassigned users. |
 | T11 | Assign task to self | ✅ | ✅ | ✅ | Must use the actual signed-in actor, not demo identity. |

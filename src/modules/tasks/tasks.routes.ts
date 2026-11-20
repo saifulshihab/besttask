@@ -22,6 +22,7 @@ tasksRouter.patch("/:taskId", tasksController.update);
 tasksRouter.delete("/:taskId", tasksController.remove);
 tasksRouter.get("/:taskId/subtasks", tasksController.listSubtasks);
 tasksRouter.patch("/:taskId/status", tasksController.setStatus);
+tasksRouter.post("/:taskId/move", tasksController.move);
 tasksRouter.patch("/:taskId/assignee", tasksController.setAssignee);
 tasksRouter.post("/:taskId/labels", tasksController.attachLabel);
 tasksRouter.delete("/:taskId/labels/:labelId", tasksController.detachLabel);
