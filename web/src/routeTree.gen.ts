@@ -19,6 +19,7 @@ import { Route as AppWWorkspaceIdAccountRouteImport } from './routes/_app/w/$wor
 import { Route as AppWWorkspaceIdActivityRouteImport } from './routes/_app/w/$workspaceId/activity'
 import { Route as AppWWorkspaceIdMembersRouteImport } from './routes/_app/w/$workspaceId/members'
 import { Route as AppWWorkspaceIdMyWorkRouteImport } from './routes/_app/w/$workspaceId/my-work'
+import { Route as AppWWorkspaceIdNotificationsRouteImport } from './routes/_app/w/$workspaceId/notifications'
 import { Route as AppWWorkspaceIdProfileRouteImport } from './routes/_app/w/$workspaceId/profile'
 import { Route as AppWWorkspaceIdSettingsRouteImport } from './routes/_app/w/$workspaceId/settings'
 import { Route as AppWWorkspaceIdPProjectIdRouteRouteImport } from './routes/_app/w/$workspaceId/p/$projectId/route'
@@ -79,6 +80,12 @@ const AppWWorkspaceIdMyWorkRoute = AppWWorkspaceIdMyWorkRouteImport.update({
   path: '/my-work',
   getParentRoute: () => AppWWorkspaceIdRouteRoute,
 } as any)
+const AppWWorkspaceIdNotificationsRoute =
+  AppWWorkspaceIdNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AppWWorkspaceIdRouteRoute,
+  } as any)
 const AppWWorkspaceIdProfileRoute = AppWWorkspaceIdProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -147,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/w/$workspaceId/activity': typeof AppWWorkspaceIdActivityRoute
   '/w/$workspaceId/members': typeof AppWWorkspaceIdMembersRoute
   '/w/$workspaceId/my-work': typeof AppWWorkspaceIdMyWorkRoute
+  '/w/$workspaceId/notifications': typeof AppWWorkspaceIdNotificationsRoute
   '/w/$workspaceId/profile': typeof AppWWorkspaceIdProfileRoute
   '/w/$workspaceId/settings': typeof AppWWorkspaceIdSettingsRoute
   '/w/$workspaceId/': typeof AppWWorkspaceIdIndexRoute
@@ -167,6 +175,7 @@ export interface FileRoutesByTo {
   '/w/$workspaceId/activity': typeof AppWWorkspaceIdActivityRoute
   '/w/$workspaceId/members': typeof AppWWorkspaceIdMembersRoute
   '/w/$workspaceId/my-work': typeof AppWWorkspaceIdMyWorkRoute
+  '/w/$workspaceId/notifications': typeof AppWWorkspaceIdNotificationsRoute
   '/w/$workspaceId/profile': typeof AppWWorkspaceIdProfileRoute
   '/w/$workspaceId/settings': typeof AppWWorkspaceIdSettingsRoute
   '/w/$workspaceId': typeof AppWWorkspaceIdIndexRoute
@@ -189,6 +198,7 @@ export interface FileRoutesById {
   '/_app/w/$workspaceId/activity': typeof AppWWorkspaceIdActivityRoute
   '/_app/w/$workspaceId/members': typeof AppWWorkspaceIdMembersRoute
   '/_app/w/$workspaceId/my-work': typeof AppWWorkspaceIdMyWorkRoute
+  '/_app/w/$workspaceId/notifications': typeof AppWWorkspaceIdNotificationsRoute
   '/_app/w/$workspaceId/profile': typeof AppWWorkspaceIdProfileRoute
   '/_app/w/$workspaceId/settings': typeof AppWWorkspaceIdSettingsRoute
   '/_app/w/$workspaceId/': typeof AppWWorkspaceIdIndexRoute
@@ -212,6 +222,7 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/activity'
     | '/w/$workspaceId/members'
     | '/w/$workspaceId/my-work'
+    | '/w/$workspaceId/notifications'
     | '/w/$workspaceId/profile'
     | '/w/$workspaceId/settings'
     | '/w/$workspaceId/'
@@ -232,6 +243,7 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/activity'
     | '/w/$workspaceId/members'
     | '/w/$workspaceId/my-work'
+    | '/w/$workspaceId/notifications'
     | '/w/$workspaceId/profile'
     | '/w/$workspaceId/settings'
     | '/w/$workspaceId'
@@ -253,6 +265,7 @@ export interface FileRouteTypes {
     | '/_app/w/$workspaceId/activity'
     | '/_app/w/$workspaceId/members'
     | '/_app/w/$workspaceId/my-work'
+    | '/_app/w/$workspaceId/notifications'
     | '/_app/w/$workspaceId/profile'
     | '/_app/w/$workspaceId/settings'
     | '/_app/w/$workspaceId/'
@@ -342,6 +355,13 @@ declare module '@tanstack/react-router' {
       path: '/my-work'
       fullPath: '/w/$workspaceId/my-work'
       preLoaderRoute: typeof AppWWorkspaceIdMyWorkRouteImport
+      parentRoute: typeof AppWWorkspaceIdRouteRoute
+    }
+    '/_app/w/$workspaceId/notifications': {
+      id: '/_app/w/$workspaceId/notifications'
+      path: '/notifications'
+      fullPath: '/w/$workspaceId/notifications'
+      preLoaderRoute: typeof AppWWorkspaceIdNotificationsRouteImport
       parentRoute: typeof AppWWorkspaceIdRouteRoute
     }
     '/_app/w/$workspaceId/profile': {
@@ -452,6 +472,7 @@ interface AppWWorkspaceIdRouteRouteChildren {
   AppWWorkspaceIdActivityRoute: typeof AppWWorkspaceIdActivityRoute
   AppWWorkspaceIdMembersRoute: typeof AppWWorkspaceIdMembersRoute
   AppWWorkspaceIdMyWorkRoute: typeof AppWWorkspaceIdMyWorkRoute
+  AppWWorkspaceIdNotificationsRoute: typeof AppWWorkspaceIdNotificationsRoute
   AppWWorkspaceIdProfileRoute: typeof AppWWorkspaceIdProfileRoute
   AppWWorkspaceIdSettingsRoute: typeof AppWWorkspaceIdSettingsRoute
   AppWWorkspaceIdIndexRoute: typeof AppWWorkspaceIdIndexRoute
@@ -463,6 +484,7 @@ const AppWWorkspaceIdRouteRouteChildren: AppWWorkspaceIdRouteRouteChildren = {
   AppWWorkspaceIdActivityRoute: AppWWorkspaceIdActivityRoute,
   AppWWorkspaceIdMembersRoute: AppWWorkspaceIdMembersRoute,
   AppWWorkspaceIdMyWorkRoute: AppWWorkspaceIdMyWorkRoute,
+  AppWWorkspaceIdNotificationsRoute: AppWWorkspaceIdNotificationsRoute,
   AppWWorkspaceIdProfileRoute: AppWWorkspaceIdProfileRoute,
   AppWWorkspaceIdSettingsRoute: AppWWorkspaceIdSettingsRoute,
   AppWWorkspaceIdIndexRoute: AppWWorkspaceIdIndexRoute,

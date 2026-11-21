@@ -18,6 +18,10 @@ import {
   tasksRouter,
   workspaceTasksRouter,
 } from "./modules/tasks/tasks.routes.js";
+import {
+  notificationsRouter,
+  workspaceNotificationsRouter,
+} from "./modules/notifications/notifications.routes.js";
 import { workspacesRouter } from "./modules/workspaces/workspaces.routes.js";
 
 import { viewsRouter } from "./modules/projects/views.routes.js";
@@ -32,6 +36,10 @@ apiRouter.use("/workspaces/:workspaceId/projects", workspaceProjectsRouter);
 apiRouter.use("/projects/:projectId/labels", workspaceLabelsRouter);
 apiRouter.use("/workspaces/:workspaceId/tasks", workspaceTasksRouter);
 apiRouter.use("/workspaces/:workspaceId/activity", workspaceActivityRouter);
+apiRouter.use(
+  "/workspaces/:workspaceId/notifications",
+  workspaceNotificationsRouter,
+);
 apiRouter.use("/projects/:projectId/tasks", projectTasksRouter);
 apiRouter.use("/tasks/:taskId/comments", taskCommentsRouter);
 
@@ -40,6 +48,7 @@ apiRouter.use("/projects", projectsRouter);
 apiRouter.use("/tasks", tasksRouter);
 apiRouter.use("/labels", labelsRouter);
 apiRouter.use("/comments", commentsRouter);
+apiRouter.use("/notifications", notificationsRouter);
 
 import { route } from "./lib/http.js";
 import { requireAuth } from "./middleware/requireAuth.js";

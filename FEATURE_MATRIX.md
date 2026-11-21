@@ -195,6 +195,9 @@ All allowed task actions below apply to accessible, active projects. Admins/memb
 | C10 | Sign out | ✅ | ✅ | ✅ | Demo sign-out is simulated; production must invalidate the session appropriately. |
 | C11 | Edit own name, email, or avatar | ✅ | ✅ | ✅ | Own account only. Other users cannot change these details through workspace management. |
 | C12 | Delete own account | ✅ | ✅ | ✅ | Transfer ownership or delete all owned workspaces first. Preserve surviving authored comments/history through an appropriate deleted-author representation. |
+| C13 | Receive in-app notifications about own tasks | ✅ | ✅ | ✅ | Assignment to the actor; comments on tasks the actor created, is assigned to, or commented on; status changes on tasks the actor created or is assigned to. Never for the actor's own actions. Only for projects the actor can currently access, checked on every read. In-app only: no email (R12). |
+| C14 | Mark own notifications read or unread, one or all | ✅ | ✅ | ✅ | Own notifications only; another user's notification answers 404. |
+| C15 | See counts of own overdue and due-today tasks | ✅ | ✅ | ✅ | Computed on request in the actor's timezone; not stored as notifications. Links to My work (V14). |
 
 ## Mobile and recovery
 

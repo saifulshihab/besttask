@@ -157,6 +157,7 @@ export const deleteAccount = async (userId: string, password: string) => {
     await tx.membership.deleteMany({ where: { userId } });
     await tx.refreshToken.deleteMany({ where: { userId } });
     await tx.savedView.deleteMany({ where: { userId } });
+    await tx.notification.deleteMany({ where: { userId } });
     await tx.task.updateMany({
       where: { assigneeId: userId },
       data: { assigneeId: null },

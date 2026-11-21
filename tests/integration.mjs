@@ -265,6 +265,127 @@ try {
     activity.data.every((a) => a.projectId === project.id),
     "Activity stays within assigned projects",
   );
+  // Notifications: assignment, status changes and comments, never for your
+  // own actions, and only for projects you can still open.
+  const inbox = (user, query = "") =>
+    request(user, `/workspaces/${ws.id}/notifications${query}`);
+  check(
+    (await inbox(member)).data.length === 0,
+    "No notifications for your own actions",
+  );
+  const notifyTask = await request(
+    admin,
+    `/projects/${project.id}/tasks`,
+    "POST",
+    { title: "Notify me", assigneeId: member.user.id, dueDate: "2020-01-02" },
+    201,
+  );
+  let memberInbox = await inbox(member);
+  check(
+    memberInbox.data.length === 1 &&
+      memberInbox.data[0].type === "task.assigned" &&
+      memberInbox.data[0].task.id === notifyTask.id &&
+      memberInbox.data[0].task.key === notifyTask.key &&
+      memberInbox.data[0].actor.id === admin.user.id,
+    "Assignee is notified of a new assignment",
+  );
+  let summary = await request(
+    member,
+    `/workspaces/${ws.id}/notifications/summary`,
+  );
+  check(
+    summary.unread === 1 && summary.overdue === 1 && summary.dueToday === 0,
+    "Summary counts unread notifications and overdue tasks",
+  );
+  await request(
+    member,
+    `/tasks/${notifyTask.id}/comments`,
+    "POST",
+    { body: "On it" },
+    201,
+  );
+  const adminInbox = await inbox(admin);
+  check(
+    adminInbox.data.length === 1 &&
+      adminInbox.data[0].type === "comment.created" &&
+      adminInbox.data[0].metadata.excerpt === "On it",
+    "Task creator is notified of comments",
+  );
+  await request(
+    owner,
+    `/tasks/${notifyTask.id}/comments`,
+    "POST",
+    { body: "Thanks" },
+    201,
+  );
+  await request(admin, `/tasks/${notifyTask.id}/move`, "POST", {
+    status: "IN_PROGRESS",
+    beforeId: null,
+  });
+  memberInbox = await inbox(member);
+  check(
+    memberInbox.data.map((n) => n.type).join() ===
+      "task.status_changed,comment.created,task.assigned" &&
+      memberInbox.data[0].metadata.to === "IN_PROGRESS",
+    "Assignee hears about comments and status changes, newest first",
+  );
+  check(
+    (await inbox(admin)).data.length === 2 &&
+      (await inbox(owner)).data.length === 0,
+    "Commenters hear about later comments; status goes to assignee and creator",
+  );
+  await request(
+    admin,
+    `/notifications/${memberInbox.data[0].id}`,
+    "PATCH",
+    { read: true },
+    404,
+  );
+  const marked = await request(
+    member,
+    `/notifications/${memberInbox.data[0].id}`,
+    "PATCH",
+    { read: true },
+  );
+  check(!!marked.readAt, "Recipient marks a notification read");
+  check(
+    (await inbox(member, "?unread=true")).data.length === 2,
+    "Unread filter leaves out read notifications",
+  );
+  const allRead = await request(
+    member,
+    `/workspaces/${ws.id}/notifications/read-all`,
+    "POST",
+  );
+  summary = await request(member, `/workspaces/${ws.id}/notifications/summary`);
+  check(
+    allRead.updated === 2 && summary.unread === 0,
+    "Mark all read clears the unread count",
+  );
+  await request(
+    outsider,
+    `/workspaces/${ws.id}/notifications`,
+    "GET",
+    undefined,
+    404,
+  );
+  await request(
+    owner,
+    `/projects/${project.id}/members/${admin.user.id}`,
+    "DELETE",
+  );
+  check(
+    (await inbox(admin)).data.length === 0,
+    "Notifications hide when access to the project is lost",
+  );
+  await request(owner, `/projects/${project.id}/members`, "POST", {
+    userId: admin.user.id,
+    role: "ADMIN",
+  });
+  check(
+    (await inbox(admin)).data.length === 2,
+    "Notifications return with project access",
+  );
   await request(owner, `/projects/${project.id}/archive`, "POST");
   await request(
     owner,

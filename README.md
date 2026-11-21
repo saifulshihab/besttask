@@ -26,6 +26,7 @@ authorization or business rules.
 - **Comments** (soft-deleted for activity continuity)
 - **Activity** feed per workspace
 - **My work**: your assigned tasks across every project, grouped by due date
+- **Notifications** in the app for assignments, comments and status changes on your tasks
 - **Members** management with explicit project roles (no invitations)
 
 ## Running it
@@ -134,7 +135,7 @@ src/                    # Express API
   server.ts app.ts routes.ts env.ts
   lib/                  prisma, tokens, password, errors, http, pagination, rbac, …
   middleware/           requireAuth, errorHandler
-  modules/<auth|workspaces|projects|tasks|labels|comments|activity>/
+  modules/<auth|workspaces|projects|tasks|labels|comments|activity|notifications>/
                         *.routes.ts  *.controller.ts  *.service.ts  *.schema.ts
 
 web/                    # Vite + React app
@@ -204,6 +205,12 @@ except register, login, and refresh.
 - `PATCH /comments/:commentId`, `DELETE /comments/:commentId`
 - `GET /workspaces/:workspaceId/activity`
 
+### Notifications
+
+- `GET /workspaces/:workspaceId/notifications` (`unread=true` for unread only)
+- `GET /workspaces/:workspaceId/notifications/summary` (`{ unread, overdue, dueToday }`)
+- `POST /workspaces/:workspaceId/notifications/read-all`, `PATCH /notifications/:notificationId` (`{ read }`)
+
 ### Roles
 
 TaskFlow uses `WORKSPACE_OWNER`, `ADMIN`, and `MEMBER`. Each workspace has
@@ -228,7 +235,7 @@ history); its values live as design tokens in `web/src/styles.css` and
 (override with `TASKFLOW_TEST_API`). It creates unique test accounts/workspaces
 and cleans up only its own fixtures. It does not reset the database. Tests cover
 project isolation, role enforcement, seats, ownership transfer, comments, saved
-views, preference persistence, sessions, and the six-second Undo window.
+views, preference persistence, sessions, notifications, and the six-second Undo window.
 
 The initial migration defines the current schema. The existing hosted
 Prisma Postgres database was reset with user authorization during development;

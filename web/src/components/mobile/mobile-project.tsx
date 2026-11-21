@@ -1,6 +1,6 @@
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Activity, ChevronDown, Columns3, Ellipsis, Plus, Search, SlidersHorizontal, UserRound } from "lucide-react";
+import { Activity, Bell, ChevronDown, Columns3, Ellipsis, Plus, Search, SlidersHorizontal, UserRound } from "lucide-react";
 import { Suspense, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { toast, toastError } from "@/lib/toast";
 import { NameDialog } from "@/components/shell/name-dialog";
@@ -16,6 +16,7 @@ import { relativeTime } from "@/lib/format";
 import { signOut, useCreateProject, useCreateTask, useMoveTask } from "@/lib/mutations";
 import {
   meQuery,
+  notificationSummaryQuery,
   projectsQuery,
   projectTasksQuery,
   workspaceQuery,
@@ -26,6 +27,7 @@ import { useDeleteTask, useUpdateTask } from "@/lib/task-mutations";
 import type { Me, Priority, ProjectDetail, Task, TaskStatus } from "@/lib/types";
 import { useUpdateProfile } from "@/lib/workspace-mutations";
 import { Sheet, sheetInput } from "./sheet";
+import { badgeText } from "@/components/notifications/notification-bell";
 
 type Page = "board" | "mine" | "activity" | "more";
 type SheetState =
@@ -102,6 +104,7 @@ export function MobileProject({ workspaceId, project }: { workspaceId: string; p
             </span>
           </span>
         </button>
+        <MobileBell workspaceId={workspaceId} />
         <button
           type="button"
           aria-label="Search tasks"
@@ -736,5 +739,29 @@ function MobileMore({
         Sign out
       </button>
     </>
+  );
+}
+
+/** Header bell: opens the notifications page, with the unread count. */
+function MobileBell({ workspaceId }: { workspaceId: string }) {
+  const { data } = useQuery(notificationSummaryQuery(workspaceId));
+  const unread = data?.unread ?? 0;
+  return (
+    <Link
+      to="/w/$workspaceId/notifications"
+      params={{ workspaceId }}
+      aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
+      className="relative flex size-11 items-center justify-center rounded-xl bg-canvas text-ink"
+    >
+      <Bell size={18} aria-hidden />
+      {unread ? (
+        <span
+          aria-hidden
+          className="absolute top-1 right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-danger-solid px-1 text-[10px] font-bold text-white ring-2 ring-row-hover"
+        >
+          {badgeText(unread)}
+        </span>
+      ) : null}
+    </Link>
   );
 }

@@ -2,8 +2,19 @@
 
 ## Unreleased
 
+### Before you deploy
+
+- **Run the new migration** (`20261121130005_notifications`) before starting the updated API. It only adds the `Notification` table; existing data is untouched. The production container applies it on start (`prisma migrate deploy`); locally run `npm run db:migrate`.
+
 ### Added
 
+- In-app notifications:
+  - You're notified when someone assigns you a task, comments on a task you created, are assigned to or have commented on, or moves a task you created or are assigned to into another status. Never for your own actions.
+  - A bell next to search in the sidebar shows the unread count (refreshed every minute and when you come back to the tab) and opens the latest notifications. Open all notifications, or the bell in the phone header, goes to a full Notifications page (also in ⌘K).
+  - All / Unread, mark one read or unread, Mark all read, and Load more. Clicking a notification marks it read and opens the task.
+  - A banner shows how many of your tasks are overdue or due today (in your profile's timezone), linking to My work. These are counted on request, not stored, so they never pile up.
+  - Notifications are checked against your access every time they're read: if you're removed from a project, its notifications disappear, and they return if you're added back. Deleting your account deletes your notifications.
+  - API: `GET /workspaces/:workspaceId/notifications` (`unread=true` to filter), `GET /workspaces/:workspaceId/notifications/summary` (`{ unread, overdue, dueToday }`), `POST /workspaces/:workspaceId/notifications/read-all`, `PATCH /notifications/:notificationId` with `{ read }`.
 - My work: a workspace page (in the sidebar, ⌘K and the phone menu) listing every task assigned to you across the projects you can open.
   - Grouped into Overdue, Today, Next 7 days, Later and No due date, soonest and most urgent first. Each row shows its project, status, priority and due date.
   - Tick the circle to mark a task done (or untick to reopen it to To do); click a row to open the task panel.

@@ -79,6 +79,13 @@ export function SearchPalette({
         run: close(() => navigate({ to: "/w/$workspaceId/my-work", params: { workspaceId } })),
       },
       {
+        id: "notifications",
+        kind: "Page",
+        label: "Notifications",
+        hint: workspace.name,
+        run: close(() => navigate({ to: "/w/$workspaceId/notifications", params: { workspaceId } })),
+      },
+      {
         id: "activity",
         kind: "Page",
         label: "Activity",

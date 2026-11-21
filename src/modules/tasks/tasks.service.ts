@@ -7,6 +7,7 @@ import { projectScope, taskScope } from "../../lib/scope.js";
 import type { Actor } from "../../lib/actor.js";
 import type { Prisma } from "../../generated/prisma/client.js";
 import { scheduleDeletion } from "../../lib/recovery.js";
+import { notify, taskFollowers } from "../../lib/notifications.js";
 import { Role, TaskStatus } from "../../generated/prisma/enums.js";
 import type {
   CreateTaskInput,
@@ -232,6 +233,15 @@ export const create = async (
     action: "task.created",
     metadata: { title: task.title, projectId },
   });
+  await notify({
+    workspaceId: project.workspaceId,
+    projectId,
+    taskId: task.id,
+    actorId: actor.id,
+    type: "task.assigned",
+    recipients: [task.assigneeId],
+    metadata: { title: task.title },
+  });
 
   return present(task);
 };
@@ -291,6 +301,7 @@ export const update = async (
   input: UpdateTaskInput,
 ) => {
   const { task, workspaceId } = await taskScope(actor.id, taskId, Role.MEMBER);
+  const changes = changesOf(task, input);
 
   if (input.assigneeId !== undefined) {
     await assertAssignee(task.projectId, input.assigneeId);
@@ -319,11 +330,46 @@ export const update = async (
     metadata: {
       title: updated.title,
       fields: Object.keys(input),
-      changes: changesOf(task, input),
+      changes,
     },
   });
+  await notifyTaskChanges(actor, workspaceId, updated, changes);
 
   return present(updated);
+};
+
+/**
+ * Tells a newly assigned user about the assignment, and the task's assignee
+ * and creator about a status change. Someone assigned and moved in the same
+ * edit hears only about the assignment.
+ */
+const notifyTaskChanges = async (
+  actor: Actor,
+  workspaceId: string,
+  task: { id: string; projectId: string; title: string; assigneeId: string | null; creatorId: string },
+  changes: ReturnType<typeof changesOf>,
+) => {
+  const base = {
+    workspaceId,
+    projectId: task.projectId,
+    taskId: task.id,
+    actorId: actor.id,
+  };
+  const assignee = changes.assigneeId?.to ?? null;
+  if (assignee)
+    await notify({
+      ...base,
+      type: "task.assigned",
+      recipients: [assignee],
+      metadata: { title: task.title },
+    });
+  if (changes.status)
+    await notify({
+      ...base,
+      type: "task.status_changed",
+      recipients: (await taskFollowers(task)).filter((id) => id !== assignee),
+      metadata: { title: task.title, from: changes.status.from, to: changes.status.to },
+    });
 };
 
 /**
@@ -439,6 +485,10 @@ export const move = async (
       action: "task.status_changed",
       metadata: { title: task.title, from: task.status, to: status },
     });
+  if (status !== task.status)
+    await notifyTaskChanges(actor, workspaceId, task, {
+      status: { from: task.status, to: status },
+    });
 
   const updated = await prisma.task.findUniqueOrThrow({
     where: { id: taskId },
@@ -476,6 +526,9 @@ export const setStatus = async (
     action: "task.status_changed",
     metadata: { title: task.title, from: task.status, to: status },
   });
+  await notifyTaskChanges(actor, workspaceId, task, {
+    status: { from: task.status, to: status },
+  });
 
   return present(updated);
 };
@@ -503,6 +556,10 @@ export const setAssignee = async (
     action: assigneeId ? "task.assigned" : "task.unassigned",
     metadata: { title: task.title, from: task.assigneeId, to: assigneeId },
   });
+  if (assigneeId !== task.assigneeId)
+    await notifyTaskChanges(actor, workspaceId, task, {
+      assigneeId: { from: task.assigneeId, to: assigneeId },
+    });
 
   return present(updated);
 };

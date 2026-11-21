@@ -194,3 +194,33 @@ export interface WorkspaceStats {
   done: number;
   comments: number;
 }
+
+export type NotificationType = "task.assigned" | "task.status_changed" | "comment.created";
+
+/** Row of GET /workspaces/:id/notifications (named to avoid the DOM's Notification). */
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  workspaceId: string;
+  projectId: string;
+  taskId: string;
+  readAt: string | null;
+  createdAt: string;
+  metadata: { title?: string; from?: TaskStatus; to?: TaskStatus; excerpt?: string; commentId?: string } | null;
+  actor: (UserSummary & { avatar: string | null }) | null;
+  task: {
+    id: string;
+    key: string;
+    title: string;
+    status: TaskStatus;
+    projectId: string;
+    project: { key: string; name: string; color: string };
+  };
+}
+
+/** GET /workspaces/:id/notifications/summary: the bell's numbers. */
+export interface NotificationSummary {
+  unread: number;
+  overdue: number;
+  dueToday: number;
+}
