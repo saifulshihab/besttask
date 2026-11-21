@@ -72,6 +72,13 @@ export function SearchPalette({
           })),
         ),
       {
+        id: "my-work",
+        kind: "Page",
+        label: "My work",
+        hint: workspace.name,
+        run: close(() => navigate({ to: "/w/$workspaceId/my-work", params: { workspaceId } })),
+      },
+      {
         id: "activity",
         kind: "Page",
         label: "Activity",

@@ -1,6 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import {
+  CircleUserRound,
   Activity,
   ChevronsUpDown,
   Ellipsis,
@@ -173,6 +174,9 @@ export function Sidebar({
 
         <div className="flex flex-col gap-0.5">
           <span className="px-2.5 pb-1 text-xs font-semibold text-muted">Workspace</span>
+          <WorkspaceLink to="/w/$workspaceId/my-work" icon={<CircleUserRound size={16} aria-hidden />}>
+            My work
+          </WorkspaceLink>
           <WorkspaceLink to="/w/$workspaceId/activity" icon={<Activity size={16} aria-hidden />}>
             Activity
           </WorkspaceLink>
@@ -203,7 +207,7 @@ function WorkspaceLink({
   icon,
   children,
 }: {
-  to: "/w/$workspaceId/activity" | "/w/$workspaceId/members" | "/w/$workspaceId/settings";
+  to: "/w/$workspaceId/my-work" | "/w/$workspaceId/activity" | "/w/$workspaceId/members" | "/w/$workspaceId/settings";
   icon: ReactNode;
   children: ReactNode;
 }) {

@@ -4,6 +4,12 @@
 
 ### Added
 
+- My work: a workspace page (in the sidebar, ⌘K and the phone menu) listing every task assigned to you across the projects you can open.
+  - Grouped into Overdue, Today, Next 7 days, Later and No due date, soonest and most urgent first. Each row shows its project, status, priority and due date.
+  - Tick the circle to mark a task done (or untick to reopen it to To do); click a row to open the task panel.
+  - Filter by project or by title and ID, and "Show completed" adds a Completed group. Filters are kept in the URL.
+  - Subtasks assigned to you are included and name their parent. Tasks in archived projects are left out.
+  - Uses the existing `GET /workspaces/:workspaceId/tasks?assigneeId=me`; there are no API changes.
 - Calendar view: a third project tab next to Board and List that shows tasks by due date, month by month (weeks start on Monday).
   - Drag a task to another day to reschedule it, or onto "No due date" to clear its date. The "No due date" panel lists open tasks without a date; drag one onto a day to schedule it.
   - The + on a day adds a task due that day, with the project's default status and priority.

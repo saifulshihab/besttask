@@ -25,6 +25,7 @@ authorization or business rules.
 - **Labels** at project scope, attachable to tasks
 - **Comments** (soft-deleted for activity continuity)
 - **Activity** feed per workspace
+- **My work**: your assigned tasks across every project, grouped by due date
 - **Members** management with explicit project roles (no invitations)
 
 ## Running it

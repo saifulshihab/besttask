@@ -176,6 +176,8 @@ All allowed task actions below apply to accessible, active projects. Admins/memb
 | V10 | Collapse or expand Cancelled board column | ✅ | ✅ | ✅ | When the column is enabled. |
 | V11 | Navigate paginated task list | ✅ | ✅ | ✅ | Prototype includes Previous, Next, and page selection. |
 | V12 | Use keyboard shortcuts and Escape to close overlays | ✅ | ✅ | ✅ | Shortcuts must not bypass action permissions. |
+| V13 | View project tasks on a calendar by due date and reschedule by dragging | ✅ | ✅ | ✅ | Accessible, non-archived projects only. Rescheduling follows the task edit rules. |
+| V14 | View My work: own assigned tasks across the workspace | ✅ | ✅ | ✅ | Only tasks in projects the actor can access; archived projects are left out. Marking done follows the task edit rules. |
 
 ## Profile, account, and notifications
 

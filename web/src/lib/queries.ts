@@ -43,6 +43,10 @@ export const keys = {
     ["workspace", workspaceId, "activity", filters] as const,
   workspaceMembers: (id: string) => ["workspace", id, "members"] as const,
   workspaceStats: (id: string) => ["workspace", id, "stats"] as const,
+  /** Tasks assigned to the signed-in user across a workspace (My work). */
+  myTasks: (workspaceId: string) => ["my-tasks", workspaceId] as const,
+  /** Prefix covering every workspace's My work list. */
+  allMyTasks: ["my-tasks"] as const,
 };
 
 export interface ActivityFilters {
@@ -179,4 +183,18 @@ export const workspaceStatsQuery = (id: string) =>
     queryKey: keys.workspaceStats(id),
     queryFn: ({ signal }) =>
       api<WorkspaceStats>(`/workspaces/${id}/stats`, { signal }),
+  });
+
+/**
+ * Tasks assigned to the signed-in user in every project they can see in the
+ * workspace, subtasks included (they are assigned on their own).
+ */
+export const myTasksQuery = (workspaceId: string) =>
+  queryOptions({
+    queryKey: keys.myTasks(workspaceId),
+    queryFn: ({ signal }) =>
+      apiAll<Task>(`/workspaces/${workspaceId}/tasks`, { assigneeId: "me", sort: "dueDate" }, signal),
+    // Board drags and other pages change these tasks without touching this
+    // list, so it refetches (behind the cached copy) whenever it is opened.
+    staleTime: 0,
   });

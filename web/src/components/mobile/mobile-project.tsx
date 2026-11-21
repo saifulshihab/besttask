@@ -684,6 +684,9 @@ function MobileMore({
         </span>
       </div>
       <nav aria-label="More pages" className="overflow-hidden rounded-xl border border-line bg-canvas">
+        <Link to="/w/$workspaceId/my-work" params={{ workspaceId }} className={link}>
+          My work
+        </Link>
         <Link to="/w/$workspaceId/p/$projectId/list" params={{ workspaceId, projectId: project.id }} className={link}>
           List view
         </Link>

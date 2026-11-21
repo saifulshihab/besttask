@@ -18,6 +18,7 @@ import { Route as AppWWorkspaceIdIndexRouteImport } from './routes/_app/w/$works
 import { Route as AppWWorkspaceIdAccountRouteImport } from './routes/_app/w/$workspaceId/account'
 import { Route as AppWWorkspaceIdActivityRouteImport } from './routes/_app/w/$workspaceId/activity'
 import { Route as AppWWorkspaceIdMembersRouteImport } from './routes/_app/w/$workspaceId/members'
+import { Route as AppWWorkspaceIdMyWorkRouteImport } from './routes/_app/w/$workspaceId/my-work'
 import { Route as AppWWorkspaceIdProfileRouteImport } from './routes/_app/w/$workspaceId/profile'
 import { Route as AppWWorkspaceIdSettingsRouteImport } from './routes/_app/w/$workspaceId/settings'
 import { Route as AppWWorkspaceIdPProjectIdRouteRouteImport } from './routes/_app/w/$workspaceId/p/$projectId/route'
@@ -71,6 +72,11 @@ const AppWWorkspaceIdActivityRoute = AppWWorkspaceIdActivityRouteImport.update({
 const AppWWorkspaceIdMembersRoute = AppWWorkspaceIdMembersRouteImport.update({
   id: '/members',
   path: '/members',
+  getParentRoute: () => AppWWorkspaceIdRouteRoute,
+} as any)
+const AppWWorkspaceIdMyWorkRoute = AppWWorkspaceIdMyWorkRouteImport.update({
+  id: '/my-work',
+  path: '/my-work',
   getParentRoute: () => AppWWorkspaceIdRouteRoute,
 } as any)
 const AppWWorkspaceIdProfileRoute = AppWWorkspaceIdProfileRouteImport.update({
@@ -140,6 +146,7 @@ export interface FileRoutesByFullPath {
   '/w/$workspaceId/account': typeof AppWWorkspaceIdAccountRoute
   '/w/$workspaceId/activity': typeof AppWWorkspaceIdActivityRoute
   '/w/$workspaceId/members': typeof AppWWorkspaceIdMembersRoute
+  '/w/$workspaceId/my-work': typeof AppWWorkspaceIdMyWorkRoute
   '/w/$workspaceId/profile': typeof AppWWorkspaceIdProfileRoute
   '/w/$workspaceId/settings': typeof AppWWorkspaceIdSettingsRoute
   '/w/$workspaceId/': typeof AppWWorkspaceIdIndexRoute
@@ -159,6 +166,7 @@ export interface FileRoutesByTo {
   '/w/$workspaceId/account': typeof AppWWorkspaceIdAccountRoute
   '/w/$workspaceId/activity': typeof AppWWorkspaceIdActivityRoute
   '/w/$workspaceId/members': typeof AppWWorkspaceIdMembersRoute
+  '/w/$workspaceId/my-work': typeof AppWWorkspaceIdMyWorkRoute
   '/w/$workspaceId/profile': typeof AppWWorkspaceIdProfileRoute
   '/w/$workspaceId/settings': typeof AppWWorkspaceIdSettingsRoute
   '/w/$workspaceId': typeof AppWWorkspaceIdIndexRoute
@@ -180,6 +188,7 @@ export interface FileRoutesById {
   '/_app/w/$workspaceId/account': typeof AppWWorkspaceIdAccountRoute
   '/_app/w/$workspaceId/activity': typeof AppWWorkspaceIdActivityRoute
   '/_app/w/$workspaceId/members': typeof AppWWorkspaceIdMembersRoute
+  '/_app/w/$workspaceId/my-work': typeof AppWWorkspaceIdMyWorkRoute
   '/_app/w/$workspaceId/profile': typeof AppWWorkspaceIdProfileRoute
   '/_app/w/$workspaceId/settings': typeof AppWWorkspaceIdSettingsRoute
   '/_app/w/$workspaceId/': typeof AppWWorkspaceIdIndexRoute
@@ -202,6 +211,7 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/account'
     | '/w/$workspaceId/activity'
     | '/w/$workspaceId/members'
+    | '/w/$workspaceId/my-work'
     | '/w/$workspaceId/profile'
     | '/w/$workspaceId/settings'
     | '/w/$workspaceId/'
@@ -221,6 +231,7 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/account'
     | '/w/$workspaceId/activity'
     | '/w/$workspaceId/members'
+    | '/w/$workspaceId/my-work'
     | '/w/$workspaceId/profile'
     | '/w/$workspaceId/settings'
     | '/w/$workspaceId'
@@ -241,6 +252,7 @@ export interface FileRouteTypes {
     | '/_app/w/$workspaceId/account'
     | '/_app/w/$workspaceId/activity'
     | '/_app/w/$workspaceId/members'
+    | '/_app/w/$workspaceId/my-work'
     | '/_app/w/$workspaceId/profile'
     | '/_app/w/$workspaceId/settings'
     | '/_app/w/$workspaceId/'
@@ -323,6 +335,13 @@ declare module '@tanstack/react-router' {
       path: '/members'
       fullPath: '/w/$workspaceId/members'
       preLoaderRoute: typeof AppWWorkspaceIdMembersRouteImport
+      parentRoute: typeof AppWWorkspaceIdRouteRoute
+    }
+    '/_app/w/$workspaceId/my-work': {
+      id: '/_app/w/$workspaceId/my-work'
+      path: '/my-work'
+      fullPath: '/w/$workspaceId/my-work'
+      preLoaderRoute: typeof AppWWorkspaceIdMyWorkRouteImport
       parentRoute: typeof AppWWorkspaceIdRouteRoute
     }
     '/_app/w/$workspaceId/profile': {
@@ -432,6 +451,7 @@ interface AppWWorkspaceIdRouteRouteChildren {
   AppWWorkspaceIdAccountRoute: typeof AppWWorkspaceIdAccountRoute
   AppWWorkspaceIdActivityRoute: typeof AppWWorkspaceIdActivityRoute
   AppWWorkspaceIdMembersRoute: typeof AppWWorkspaceIdMembersRoute
+  AppWWorkspaceIdMyWorkRoute: typeof AppWWorkspaceIdMyWorkRoute
   AppWWorkspaceIdProfileRoute: typeof AppWWorkspaceIdProfileRoute
   AppWWorkspaceIdSettingsRoute: typeof AppWWorkspaceIdSettingsRoute
   AppWWorkspaceIdIndexRoute: typeof AppWWorkspaceIdIndexRoute
@@ -442,6 +462,7 @@ const AppWWorkspaceIdRouteRouteChildren: AppWWorkspaceIdRouteRouteChildren = {
   AppWWorkspaceIdAccountRoute: AppWWorkspaceIdAccountRoute,
   AppWWorkspaceIdActivityRoute: AppWWorkspaceIdActivityRoute,
   AppWWorkspaceIdMembersRoute: AppWWorkspaceIdMembersRoute,
+  AppWWorkspaceIdMyWorkRoute: AppWWorkspaceIdMyWorkRoute,
   AppWWorkspaceIdProfileRoute: AppWWorkspaceIdProfileRoute,
   AppWWorkspaceIdSettingsRoute: AppWWorkspaceIdSettingsRoute,
   AppWWorkspaceIdIndexRoute: AppWWorkspaceIdIndexRoute,
