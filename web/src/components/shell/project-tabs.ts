@@ -1,6 +1,7 @@
 export const PROJECT_TABS = [
   "board",
   "list",
+  "calendar",
   "activity",
   "members",
   "settings",

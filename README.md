@@ -20,7 +20,7 @@ authorization or business rules.
 ## Features
 
 - **Workspaces** with slug, settings, and workspace ownership and project roles (`WORKSPACE_OWNER`, `ADMIN`, `MEMBER`)
-- **Projects** with status, archive/unarchive, and per-project **board** and **list** views
+- **Projects** with status, archive/unarchive, and per-project **board**, **list** and **calendar** views
 - **Tasks** with status, priority, assignee, due dates, subtasks, and drag-and-drop on boards
 - **Labels** at project scope, attachable to tasks
 - **Comments** (soft-deleted for activity continuity)
@@ -138,7 +138,7 @@ src/                    # Express API
 
 web/                    # Vite + React app
   src/routes/           file-based TanStack Router routes (/login, /w/$workspaceId/…)
-  src/components/       ui primitives, app shell, tasks (board, list, panel), mobile
+  src/components/       ui primitives, app shell, tasks (board, list, calendar, panel), mobile
   src/lib/              api client, auth, query keys + options, mutations, design tokens
 
 prisma/                 schema and migrations

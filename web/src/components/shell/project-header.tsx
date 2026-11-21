@@ -93,6 +93,7 @@ export function ProjectHeader() {
       <div role="tablist" aria-label="Project views" className="flex gap-5">
         {tab("board", "Board")}
         {tab("list", "List")}
+        {tab("calendar", "Calendar")}
         {tab("activity", "Activity")}
         {tab("members", "Members", people.filter((p) => p.active).length || undefined)}
         {canManage ? tab("settings", "Settings") : null}

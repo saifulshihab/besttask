@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Added
+
+- Calendar view: a third project tab next to Board and List that shows tasks by due date, month by month (weeks start on Monday).
+  - Drag a task to another day to reschedule it, or onto "No due date" to clear its date. The "No due date" panel lists open tasks without a date; drag one onto a day to schedule it.
+  - The + on a day adds a task due that day, with the project's default status and priority.
+  - A day shows three tasks, then "+N more". Overdue tasks are red, and done and cancelled ones are muted with an icon.
+  - Search and filters work as on the board, and the month is kept in the URL (`?month=YYYY-MM`).
+  - On phones the calendar is a list of the month's days with tasks; dates change in the task panel.
+  - Like the board, the calendar shows top-level tasks only. It uses the existing task APIs; there are no API changes.
+
 ### Changed
 
 - Board redesign:

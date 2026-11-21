@@ -58,10 +58,10 @@ export function SearchPalette({
       ...projects
         .filter((p) => !p.archivedAt)
         .flatMap((p) =>
-          (["board", "list"] as const).map((tab) => ({
+          (["board", "list", "calendar"] as const).map((tab) => ({
             id: `${p.id}-${tab}`,
             kind: "Project",
-            label: `${p.name} · ${tab === "board" ? "Board" : "List"}`,
+            label: `${p.name} · ${tab.charAt(0).toUpperCase()}${tab.slice(1)}`,
             hint: p.key,
             run: close(() =>
               navigate({

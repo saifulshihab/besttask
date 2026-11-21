@@ -687,6 +687,9 @@ function MobileMore({
         <Link to="/w/$workspaceId/p/$projectId/list" params={{ workspaceId, projectId: project.id }} className={link}>
           List view
         </Link>
+        <Link to="/w/$workspaceId/p/$projectId/calendar" params={{ workspaceId, projectId: project.id }} className={link}>
+          Calendar
+        </Link>
         {project.role !== "MEMBER" ? (
           <Link to="/w/$workspaceId/p/$projectId/settings" params={{ workspaceId, projectId: project.id }} className={link}>
             Project settings
