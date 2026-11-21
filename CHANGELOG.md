@@ -8,6 +8,7 @@
 
 ### Added
 
+- CI runs the API integration tests on every pull request and push to `main`, against a throwaway PostgreSQL 16 database with the committed migrations applied, using the compiled API as in production.
 - In-app notifications:
   - You're notified when someone assigns you a task, comments on a task you created, are assigned to or have commented on, or moves a task you created or are assigned to into another status. Never for your own actions.
   - A bell next to search in the sidebar shows the unread count (refreshed every minute and when you come back to the tab) and opens the latest notifications. Open all notifications, or the bell in the phone header, goes to a full Notifications page (also in ⌘K).

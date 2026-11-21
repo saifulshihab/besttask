@@ -108,6 +108,9 @@ them before running against a database with data. To create a new migration with
 ### GitHub CI and Vercel deployment
 
 GitHub Actions runs API and web checks on pull requests and pushes to `main`.
+A third job runs the integration tests: it starts a throwaway PostgreSQL 16
+service, applies the committed migrations, starts the compiled API and runs
+`npm run test:integration`. It never touches the hosted database.
 The API Docker image build does not connect to the database. When a production
 container starts, it runs `prisma migrate deploy` before accepting requests.
 This applies only committed migrations. Set `DIRECT_URL` on the API host to the **direct connection URL for the
@@ -231,6 +234,7 @@ history); its values live as design tokens in `web/src/styles.css` and
 
 ### Integration tests
 
+CI runs this suite on every pull request (see above). Locally,
 `npm run test:integration` exercises the running API at `http://localhost:4000/api`
 (override with `TASKFLOW_TEST_API`). It creates unique test accounts/workspaces
 and cleans up only its own fixtures. It does not reset the database. Tests cover
