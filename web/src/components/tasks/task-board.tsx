@@ -2,11 +2,13 @@ import {
   closestCorners,
   DndContext,
   DragOverlay,
+  pointerWithin,
   PointerSensor,
   TouchSensor,
   useDroppable,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
@@ -60,7 +62,8 @@ export function TaskBoard({
   const editable = !project.archivedAt;
   // While dragging, a working copy of the board (task ids per column) lets
   // cards make room as the dragged card crosses columns.
-  const [drag, setDrag] = useState<{ task: Task; layout: Layout } | null>(null);
+  /** `over` is the column under the pointer, whether over the lane or a card in it. */
+  const [drag, setDrag] = useState<{ task: Task; layout: Layout; over?: TaskStatus } | null>(null);
   const [addingIn, setAddingIn] = useState<TaskStatus | null>(null);
   const [cancelledOpen, setCancelledOpen] = useState(false);
   const today = todayString();
@@ -122,6 +125,20 @@ export function TaskBoard({
     onDelete: () => remove.mutate(task),
   });
 
+  // The column under the pointer wins; the closest card inside it then sets
+  // the position. Plain closestCorners measures to a lane's far corners, so
+  // near the top of a tall empty column a card next door could win instead.
+  const collisionDetection: CollisionDetection = (args) => {
+    const column = pointerWithin(args).find((c) => (columns as string[]).includes(String(c.id)));
+    if (!column) return closestCorners(args);
+    const ids = layout[column.id as TaskStatus] ?? [];
+    const cards = closestCorners({
+      ...args,
+      droppableContainers: args.droppableContainers.filter((c) => ids.includes(String(c.id))),
+    });
+    return cards.length ? cards : [column];
+  };
+
   const onDragStart = ({ active }: DragStartEvent) => {
     const task = byId.get(String(active.id));
     if (task) setDrag({ task, layout: baseLayout });
@@ -129,16 +146,19 @@ export function TaskBoard({
 
   // Crossing into another column: move the card into it, where it is hovered.
   const onDragOver = ({ active, over }: DragOverEvent) => {
-    if (!drag || !over) return;
+    if (!drag) return;
     const id = String(active.id);
     const from = columnOf(id, drag.layout);
-    const to = columnOf(String(over.id), drag.layout);
-    if (!from || !to || from === to) return;
+    const to = over ? columnOf(String(over.id), drag.layout) : undefined;
+    if (!from || !to || from === to) {
+      if (to !== drag.over) setDrag({ ...drag, over: to });
+      return;
+    }
     const target = drag.layout[to];
-    const at = target.indexOf(String(over.id));
+    const at = target.indexOf(String(over!.id));
     const next = { ...drag.layout, [from]: drag.layout[from].filter((x) => x !== id), [to]: [...target] };
     next[to].splice(at === -1 ? target.length : at, 0, id);
-    setDrag({ ...drag, layout: next });
+    setDrag({ ...drag, layout: next, over: to });
   };
 
   const onDragEnd = ({ over }: DragEndEvent) => {
@@ -171,7 +191,7 @@ export function TaskBoard({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={collisionDetection}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
@@ -187,6 +207,7 @@ export function TaskBoard({
             wipLimit: status === "IN_PROGRESS" ? project.wipLimit : 0,
             filtering,
             editable,
+            over: drag?.over === status,
           };
           if (status === "CANCELLED" && !cancelledOpen)
             return (
@@ -256,6 +277,8 @@ interface ColumnBase {
   wipLimit: number;
   filtering: boolean;
   editable: boolean;
+  /** A dragged card is over this column (its lane or one of its cards). */
+  over: boolean;
 }
 
 /** "3", "2 of 3" while filtering, or "4 / 3" against a WIP limit. */
@@ -319,8 +342,8 @@ function Column({
   workspaceId: string;
   project: ProjectDetail;
 }) {
-  const { status, cards, total, wipLimit, filtering, editable } = base;
-  const { setNodeRef, isOver } = useDroppable({ id: status, disabled: !editable });
+  const { status, cards, total, wipLimit, filtering, editable, over } = base;
+  const { setNodeRef } = useDroppable({ id: status, disabled: !editable });
   const navigate = useNavigate();
   const name = STATUSES[status].name;
   const overWip = wipLimit > 0 && total > wipLimit;
@@ -332,7 +355,7 @@ function Column({
     <section
       ref={setNodeRef}
       aria-label={name}
-      style={laneStyle(status, isOver)}
+      style={laneStyle(status, over)}
       className="flex min-w-[208px] flex-1 basis-0 flex-col gap-2 rounded-2xl bg-lane p-2 transition-colors"
     >
       <div className="flex h-9 items-center gap-1.5 pr-0.5 pl-1">
@@ -419,15 +442,16 @@ function CollapsedColumn({
   status,
   total,
   editable,
+  over,
   onExpand,
 }: ColumnBase & { onExpand: () => void }) {
-  const { setNodeRef, isOver } = useDroppable({ id: status, disabled: !editable });
+  const { setNodeRef } = useDroppable({ id: status, disabled: !editable });
   const name = STATUSES[status].name;
   return (
     <section
       ref={setNodeRef}
       aria-label={name}
-      style={laneStyle(status, isOver)}
+      style={laneStyle(status, over)}
       className="flex w-12 shrink-0 flex-col items-center gap-3 rounded-2xl bg-lane py-2 transition-colors"
     >
       <button
