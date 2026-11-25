@@ -1,4 +1,4 @@
-# TaskFlow
+# BestTask
 
 Full-stack project and task management: workspaces, Kanban boards, labels,
 comments, and an activity feed. The **Express REST API** holds the domain logic;
@@ -123,7 +123,7 @@ Deploy the Express API on a separate host. Set `JWT_ACCESS_SECRET` and
 route. Set `VITE_API_URL` in Vercel to the deployed API's HTTPS URL ending in
 `/api` (for example, `https://api.example.com/api`). Vite reads it at build
 time, so redeploy after changing it. On the API host, add the web app's origin
-(for example, `https://taskflow.vercel.app`) to `CORS_ORIGIN`; it takes a
+(for example, `https://besttask.vercel.app`) to `CORS_ORIGIN`; it takes a
 comma-separated list of exact origins, so preview deployments need their URL
 added too. The web app does not need database credentials.
 
@@ -216,7 +216,7 @@ except register, login, and refresh.
 
 ### Roles
 
-TaskFlow uses `WORKSPACE_OWNER`, `ADMIN`, and `MEMBER`. Each workspace has
+BestTask uses `WORKSPACE_OWNER`, `ADMIN`, and `MEMBER`. Each workspace has
 exactly one owner; Admin/Member roles belong to explicit project assignments.
 Any registered user may create a workspace and become its owner. Only the
 workspace owner manages workspace people/settings, creates projects, changes
@@ -236,7 +236,7 @@ history); its values live as design tokens in `web/src/styles.css` and
 
 CI runs this suite on every pull request (see above). Locally,
 `npm run test:integration` exercises the running API at `http://localhost:4000/api`
-(override with `TASKFLOW_TEST_API`). It creates unique test accounts/workspaces
+(override with `BESTTASK_TEST_API`). It creates unique test accounts/workspaces
 and cleans up only its own fixtures. It does not reset the database. Tests cover
 project isolation, role enforcement, seats, ownership transfer, comments, saved
 views, preference persistence, sessions, notifications, and the six-second Undo window.

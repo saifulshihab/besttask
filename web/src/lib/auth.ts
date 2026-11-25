@@ -3,8 +3,8 @@
  * token design. Subscribers are notified on change so the router can react to
  * sign-in and sign-out, including from other tabs.
  */
-const ACCESS_KEY = "tf_access";
-const REFRESH_KEY = "tf_refresh";
+const ACCESS_KEY = "bt_access";
+const REFRESH_KEY = "bt_refresh";
 
 export interface Tokens {
   accessToken: string;

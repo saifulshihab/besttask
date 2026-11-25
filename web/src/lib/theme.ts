@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import type { Me } from "./types";
 
-const KEY = "tf_theme";
+const KEY = "bt_theme";
 
 /**
  * Applies the account's appearance (light, dark or follow the system) to

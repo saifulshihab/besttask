@@ -112,7 +112,7 @@ export async function api<T>(
     // A cancelled request stays a cancellation; anything else means the
     // server could not be reached (offline, DNS, CORS, server down).
     if (options.signal?.aborted) throw error;
-    throw new ApiError(0, "NETWORK", "Can’t reach TaskFlow. Check your connection, then try again.");
+    throw new ApiError(0, "NETWORK", "Can’t reach BestTask. Check your connection, then try again.");
   }
 
   if (response.status === 204) return undefined as T;

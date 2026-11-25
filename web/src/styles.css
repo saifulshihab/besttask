@@ -194,25 +194,25 @@
 }
 
 /* react-colorful, sized and rounded to match the popovers. */
-.tf-color-picker.react-colorful {
+.bt-color-picker.react-colorful {
   width: 100%;
   height: 150px;
   gap: 10px;
 }
-.tf-color-picker .react-colorful__saturation {
+.bt-color-picker .react-colorful__saturation {
   border-radius: 6px;
   border-bottom: 0;
 }
-.tf-color-picker .react-colorful__hue {
+.bt-color-picker .react-colorful__hue {
   height: 12px;
   border-radius: 999px;
 }
-.tf-color-picker .react-colorful__pointer {
+.bt-color-picker .react-colorful__pointer {
   width: 18px;
   height: 18px;
   border-width: 2px;
 }
-.tf-color-picker .react-colorful__interactive:focus .react-colorful__pointer {
+.bt-color-picker .react-colorful__interactive:focus .react-colorful__pointer {
   transform: translate(-50%, -50%) scale(1.15);
   box-shadow: 0 0 0 2px var(--color-accent);
 }

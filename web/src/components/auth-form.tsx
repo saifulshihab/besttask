@@ -12,10 +12,10 @@ type Mode = "login" | "register";
 
 const copy = {
   login: {
-    title: "Sign in to TaskFlow",
+    title: "Sign in to BestTask",
     lead: "Plan work, track tasks, keep the trail.",
     submit: "Sign in",
-    switchText: "New to TaskFlow?",
+    switchText: "New to BestTask?",
     switchLink: "Create an account",
   },
   register: {
@@ -59,7 +59,7 @@ export function AuthForm({ mode, next }: { mode: Mode; next?: string }) {
       setError(
         caught instanceof ApiError
           ? caught
-          : new ApiError(0, "NETWORK", "Could not reach TaskFlow. Try again."),
+          : new ApiError(0, "NETWORK", "Could not reach BestTask. Try again."),
       );
     } finally {
       setPending(false);
@@ -73,7 +73,7 @@ export function AuthForm({ mode, next }: { mode: Mode; next?: string }) {
     <div className="flex min-h-svh items-center justify-center bg-sidebar p-6">
       <div className="flex w-full max-w-[380px] flex-col gap-3.5 rounded-xl border border-line bg-canvas p-7">
         <span className="flex size-10 items-center justify-center self-center rounded-lg bg-accent font-bold text-white">
-          TF
+          BT
         </span>
         <div className="flex flex-col gap-1 text-center">
           <h1 className="m-0 text-lg font-bold">{text.title}</h1>

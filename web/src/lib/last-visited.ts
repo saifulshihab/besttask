@@ -1,6 +1,6 @@
 /** Remembers the last workspace and project per browser, to reopen them on "/". */
-const WORKSPACE_KEY = "tf_last_workspace";
-const projectKey = (workspaceId: string) => `tf_last_project:${workspaceId}`;
+const WORKSPACE_KEY = "bt_last_workspace";
+const projectKey = (workspaceId: string) => `bt_last_project:${workspaceId}`;
 
 const get = (key: string) => {
   try {

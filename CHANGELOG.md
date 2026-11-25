@@ -32,6 +32,7 @@
 
 ### Changed
 
+- Renamed from TaskFlow to BestTask: the app name, sign-in page, logo mark (BT), favicon, error messages and docs. Internal names follow (`besttask-api` / `besttask-web` packages, the `besttask` Docker Compose project and images, the CI test database, and the `BESTTASK_TEST_API` / `BESTTASK_TEST_RESTART` variables, which were `TASKFLOW_…`). Browser storage keys changed from `tf_…` to `bt_…`; the app moves existing values over on first load, so nobody is signed out or loses settings.
 - Board redesign:
   - Each column is a rounded lane, with the status dot, name and count in its header, a column menu, and Add task inside the lane.
   - Cards are white on the lane with a soft shadow. They show the ID and a quick-action menu on top (move, assign to me, unassign, delete), a title cut at two lines, labels, and a footer with priority, due date ("Overdue", "Today" or "Tomorrow"), a subtask progress ring, comments and the assignee.

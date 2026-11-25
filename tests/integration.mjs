@@ -3,9 +3,9 @@ import { execFileSync } from "node:child_process";
 
 // Exercises real HTTP authorization and persistence. Creates only its own
 // uniquely named fixtures; never resets the database or modifies other data.
-const base = process.env.TASKFLOW_TEST_API ?? "http://localhost:4000/api";
+const base = process.env.BESTTASK_TEST_API ?? "http://localhost:4000/api";
 const suffix = crypto.randomUUID().slice(0, 8);
-const password = "Taskflow-test-123!";
+const password = "Besttask-test-123!";
 let assertions = 0;
 async function request(actor, path, method = "GET", body, status = 200) {
   const response = await fetch(base + path, {
@@ -400,7 +400,7 @@ try {
   await request(member, `/recovery/${deletion.recoveryId}/undo`, "POST");
   await request(member, `/tasks/${sub.id}`);
   const expired = await request(member, `/tasks/${sub.id}`, "DELETE");
-  if (process.env.TASKFLOW_TEST_RESTART === "1") {
+  if (process.env.BESTTASK_TEST_RESTART === "1") {
     execFileSync("docker", ["compose", "restart", "api"], { stdio: "pipe" });
     let ready = false;
     for (let attempt = 0; attempt < 30; attempt++) {

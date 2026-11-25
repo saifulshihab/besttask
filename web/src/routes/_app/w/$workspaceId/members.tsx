@@ -183,7 +183,7 @@ function WorkspaceMembers() {
               <li className="p-7 text-center text-sm text-muted">
                 {projectFilter
                   ? "No one is on this project yet besides you."
-                  : "No one else is in this workspace yet. Add people who already have a TaskFlow account."}
+                  : "No one else is in this workspace yet. Add people who already have a BestTask account."}
               </li>
             ) : null}
           </ul>
@@ -223,7 +223,7 @@ function AddUserDialog({ workspaceId, onClose }: { workspaceId: string; onClose:
         <Field
           label="Email address"
           error={add.error?.message}
-          hint="They need a TaskFlow account already. Adding them doesn’t put them on a project: do that from the project’s Members tab."
+          hint="They need a BestTask account already. Adding them doesn’t put them on a project: do that from the project’s Members tab."
         >
           <Input
             autoFocus

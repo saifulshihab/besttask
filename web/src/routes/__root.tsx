@@ -20,7 +20,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       <PageMessage
         title="Page not found"
         body="The link may be old, or the page was moved."
-        action={<a href="/">Go to TaskFlow</a>}
+        action={<a href="/">Go to BestTask</a>}
       />
     </div>
   ),

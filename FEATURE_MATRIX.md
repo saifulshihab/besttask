@@ -1,8 +1,8 @@
-# TaskFlow — feature and actor matrix
+# BestTask — feature and actor matrix
 
 Status: **Implemented** (agreed 2026-11-08, verified 2026-11-18)
 
-This document is the source of truth for who can do what in TaskFlow. The API enforces these rules, and the web app shows only the actions a person is allowed to take. When a rule changes, update this document and the API together, and keep feature IDs stable.
+This document is the source of truth for who can do what in BestTask. The API enforces these rules, and the web app shows only the actions a person is allowed to take. When a rule changes, update this document and the API together, and keep feature IDs stable.
 
 ## Legend and scope
 

@@ -1,4 +1,4 @@
-/** Response shapes of the TaskFlow REST API (src/modules on the backend). */
+/** Response shapes of the BestTask REST API (src/modules on the backend). */
 
 export type Role = "WORKSPACE_OWNER" | "ADMIN" | "MEMBER";
 export type TaskStatus =

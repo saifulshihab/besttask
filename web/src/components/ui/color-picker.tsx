@@ -46,7 +46,7 @@ export function ColorPanel({
       <HexColorPicker
         color={draft}
         onChange={(hex) => (setDraft(hex), setText(hex.toUpperCase()))}
-        className="tf-color-picker"
+        className="bt-color-picker"
       />
       <div className="flex items-center gap-2">
         <span className="size-8 shrink-0 rounded-md border border-line" style={{ background: draft }} aria-hidden />

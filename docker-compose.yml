@@ -1,11 +1,11 @@
 # Pinned so the project name (and therefore the node_modules volume and
 # container names) does not change if the directory is renamed or cloned.
-name: taskflow
+name: besttask
 
 services:
   api:
     build: .
-    image: taskflow-api-dev
+    image: besttask-api-dev
     env_file:
       - .env
     environment:
@@ -26,7 +26,7 @@ services:
 
   web:
     build: ./web
-    image: taskflow-web-dev
+    image: besttask-web-dev
     environment:
       # Vite proxies /api to the API container, so the browser needs no CORS.
       API_PROXY_TARGET: http://api:${PORT:-4000}

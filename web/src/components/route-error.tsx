@@ -10,7 +10,7 @@ const copy = (error: unknown, scope: Scope) => {
   const thing = scope === "page" ? "page" : scope;
   if (status === 0)
     return {
-      title: "Can’t reach TaskFlow",
+      title: "Can’t reach BestTask",
       body: "Check your connection, then try again. Nothing you saved is lost.",
       retry: true,
     };
