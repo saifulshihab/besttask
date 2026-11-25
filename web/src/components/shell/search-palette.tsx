@@ -58,10 +58,10 @@ export function SearchPalette({
       ...projects
         .filter((p) => !p.archivedAt)
         .flatMap((p) =>
-          (["board", "list"] as const).map((tab) => ({
+          (["board", "list", "calendar"] as const).map((tab) => ({
             id: `${p.id}-${tab}`,
             kind: "Project",
-            label: `${p.name} · ${tab === "board" ? "Board" : "List"}`,
+            label: `${p.name} · ${tab.charAt(0).toUpperCase()}${tab.slice(1)}`,
             hint: p.key,
             run: close(() =>
               navigate({
@@ -71,6 +71,20 @@ export function SearchPalette({
             ),
           })),
         ),
+      {
+        id: "my-work",
+        kind: "Page",
+        label: "My work",
+        hint: workspace.name,
+        run: close(() => navigate({ to: "/w/$workspaceId/my-work", params: { workspaceId } })),
+      },
+      {
+        id: "notifications",
+        kind: "Page",
+        label: "Notifications",
+        hint: workspace.name,
+        run: close(() => navigate({ to: "/w/$workspaceId/notifications", params: { workspaceId } })),
+      },
       {
         id: "activity",
         kind: "Page",

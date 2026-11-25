@@ -1,6 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import {
+  CircleUserRound,
   Activity,
   ChevronsUpDown,
   Ellipsis,
@@ -21,6 +22,7 @@ import {
   MenuTrigger,
 } from "@/components/ui/menu";
 import { cn } from "@/lib/cn";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { ROLE_LABELS } from "@/lib/design";
 import { signOut, useRestoreProject } from "@/lib/mutations";
 import {
@@ -88,14 +90,17 @@ export function Sidebar({
     >
       <WorkspaceMenu onCreateWorkspace={onCreateWorkspace} />
 
-      <button
-        type="button"
-        onClick={onOpenSearch}
-        className="flex h-9 items-center gap-2 rounded-md border border-line bg-canvas px-2.5 text-sm text-muted"
-      >
-        <Search size={15} aria-hidden />
-        <span className="flex-1 text-left">Search or jump to…</span>
-      </button>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onOpenSearch}
+          className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border border-line bg-canvas px-2.5 text-sm text-muted"
+        >
+          <Search size={15} aria-hidden />
+          <span className="flex-1 truncate text-left">Search or jump to…</span>
+        </button>
+        <NotificationBell workspaceId={workspaceId} />
+      </div>
 
       {/* Projects and Workspace scroll here when they outgrow the window; the
           switcher, search and account menu stay put. */}
@@ -173,6 +178,9 @@ export function Sidebar({
 
         <div className="flex flex-col gap-0.5">
           <span className="px-2.5 pb-1 text-xs font-semibold text-muted">Workspace</span>
+          <WorkspaceLink to="/w/$workspaceId/my-work" icon={<CircleUserRound size={16} aria-hidden />}>
+            My work
+          </WorkspaceLink>
           <WorkspaceLink to="/w/$workspaceId/activity" icon={<Activity size={16} aria-hidden />}>
             Activity
           </WorkspaceLink>
@@ -203,7 +211,7 @@ function WorkspaceLink({
   icon,
   children,
 }: {
-  to: "/w/$workspaceId/activity" | "/w/$workspaceId/members" | "/w/$workspaceId/settings";
+  to: "/w/$workspaceId/my-work" | "/w/$workspaceId/activity" | "/w/$workspaceId/members" | "/w/$workspaceId/settings";
   icon: ReactNode;
   children: ReactNode;
 }) {

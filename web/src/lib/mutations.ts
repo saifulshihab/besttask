@@ -61,6 +61,8 @@ export interface NewTask {
   assigneeId: string | null;
   /** Set to create a subtask. */
   parentTaskId?: string;
+  /** YYYY-MM-DDT00:00:00.000Z, as the task panel sends it. */
+  dueDate?: string;
 }
 
 const isOpen = (status: TaskStatus) => status !== "DONE" && status !== "CANCELLED";

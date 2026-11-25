@@ -24,6 +24,10 @@ export const writeTask = (
     tasks?.map((t) => (t.id === id ? update(t) : t)),
   );
   qc.setQueryData<Task>(keys.task(id), (task) => (task ? update(task) : task));
+  // My work lists tasks from many projects; keep its copy in step too.
+  qc.setQueriesData<Task[]>({ queryKey: keys.allMyTasks }, (tasks) =>
+    tasks?.map((t) => (t.id === id ? update(t) : t)),
+  );
 };
 
 export type TaskPatch = Partial<
@@ -58,6 +62,7 @@ export const useUpdateTask = (workspaceId: string, projectId: string) => {
     onError: (error, { id }, context) => {
       if (context?.previous) qc.setQueryData(keys.projectTasks(projectId), context.previous);
       if (context?.before) qc.setQueryData(keys.task(id), context.before);
+      void qc.invalidateQueries({ queryKey: keys.allMyTasks });
       toastError(error);
     },
     onSuccess: (task, { patch }, context) => {
@@ -115,11 +120,15 @@ export const useDeleteTask = (workspaceId: string, projectId: string) => {
     Promise.all([
       qc.invalidateQueries({ queryKey: keys.projectTasks(projectId) }),
       qc.invalidateQueries({ queryKey: keys.projects(workspaceId) }),
+      qc.invalidateQueries({ queryKey: keys.allMyTasks }),
     ]);
   return useMutation({
     mutationFn: (task: Task) => api<Recovery>(`/tasks/${task.id}`, { method: "DELETE" }),
     onSuccess: (recovery, task) => {
       qc.setQueryData<Task[]>(keys.projectTasks(projectId), (tasks) =>
+        tasks?.filter((t) => t.id !== task.id && t.parentTaskId !== task.id),
+      );
+      qc.setQueriesData<Task[]>({ queryKey: keys.allMyTasks }, (tasks) =>
         tasks?.filter((t) => t.id !== task.id && t.parentTaskId !== task.id),
       );
       void qc.invalidateQueries({ queryKey: keys.projects(workspaceId) });

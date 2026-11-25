@@ -7,6 +7,7 @@ import {
   type Pagination,
 } from "../../lib/pagination.js";
 import { recordActivity } from "../../lib/activity.js";
+import { notify, taskFollowers } from "../../lib/notifications.js";
 import { Role } from "../../generated/prisma/enums.js";
 import type { Actor } from "../../lib/actor.js";
 import type { CreateCommentInput } from "./comments.schema.js";
@@ -53,6 +54,16 @@ export const create = async (
     action: "comment.created",
     // The feed quotes the start of the comment, as the redesign shows.
     metadata: { taskId, title: task.title, excerpt: input.body.slice(0, 140) },
+  });
+  // The assignee, the creator, and everyone else in the conversation.
+  await notify({
+    workspaceId,
+    projectId: task.projectId,
+    taskId,
+    actorId: actor.id,
+    type: "comment.created",
+    recipients: await taskFollowers(task, { commenters: true }),
+    metadata: { title: task.title, excerpt: input.body.slice(0, 140), commentId: c.id },
   });
   return c;
 };

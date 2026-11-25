@@ -1,6 +1,8 @@
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { api, apiAll } from "./api";
 import type {
+  AppNotification,
+  NotificationSummary,
   ActivityEvent,
   Paginated,
   Candidate,
@@ -43,6 +45,16 @@ export const keys = {
     ["workspace", workspaceId, "activity", filters] as const,
   workspaceMembers: (id: string) => ["workspace", id, "members"] as const,
   workspaceStats: (id: string) => ["workspace", id, "stats"] as const,
+  notifications: (workspaceId: string, unreadOnly = false) =>
+    ["workspace", workspaceId, "notifications", { unreadOnly }] as const,
+  /** Prefix covering both notification lists and the summary. */
+  allNotifications: (workspaceId: string) => ["workspace", workspaceId, "notifications"] as const,
+  notificationSummary: (workspaceId: string) =>
+    ["workspace", workspaceId, "notifications", "summary"] as const,
+  /** Tasks assigned to the signed-in user across a workspace (My work). */
+  myTasks: (workspaceId: string) => ["my-tasks", workspaceId] as const,
+  /** Prefix covering every workspace's My work list. */
+  allMyTasks: ["my-tasks"] as const,
 };
 
 export interface ActivityFilters {
@@ -179,4 +191,47 @@ export const workspaceStatsQuery = (id: string) =>
     queryKey: keys.workspaceStats(id),
     queryFn: ({ signal }) =>
       api<WorkspaceStats>(`/workspaces/${id}/stats`, { signal }),
+  });
+
+/**
+ * Tasks assigned to the signed-in user in every project they can see in the
+ * workspace, subtasks included (they are assigned on their own).
+ */
+export const myTasksQuery = (workspaceId: string) =>
+  queryOptions({
+    queryKey: keys.myTasks(workspaceId),
+    queryFn: ({ signal }) =>
+      apiAll<Task>(`/workspaces/${workspaceId}/tasks`, { assigneeId: "me", sort: "dueDate" }, signal),
+    // Board drags and other pages change these tasks without touching this
+    // list, so it refetches (behind the cached copy) whenever it is opened.
+    staleTime: 0,
+  });
+
+export const NOTIFICATION_PAGE_SIZE = 20;
+
+/** The signed-in user's notifications, newest first, a page at a time. */
+export const notificationsQuery = (workspaceId: string, unreadOnly = false) =>
+  infiniteQueryOptions({
+    queryKey: keys.notifications(workspaceId, unreadOnly),
+    queryFn: ({ pageParam, signal }) =>
+      api<Paginated<AppNotification>>(`/workspaces/${workspaceId}/notifications`, {
+        query: { page: pageParam, pageSize: NOTIFICATION_PAGE_SIZE, unread: unreadOnly || undefined },
+        signal,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.meta.page < last.meta.totalPages ? last.meta.page + 1 : undefined),
+    staleTime: 0,
+  });
+
+/**
+ * Unread count and due-task counts for the bell. There is no push channel
+ * yet, so it polls once a minute (and refetches when the window regains focus).
+ */
+export const notificationSummaryQuery = (workspaceId: string) =>
+  queryOptions({
+    queryKey: keys.notificationSummary(workspaceId),
+    queryFn: ({ signal }) =>
+      api<NotificationSummary>(`/workspaces/${workspaceId}/notifications/summary`, { signal }),
+    staleTime: 15_000,
+    refetchInterval: 60_000,
   });

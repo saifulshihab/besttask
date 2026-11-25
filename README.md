@@ -20,11 +20,13 @@ authorization or business rules.
 ## Features
 
 - **Workspaces** with slug, settings, and workspace ownership and project roles (`WORKSPACE_OWNER`, `ADMIN`, `MEMBER`)
-- **Projects** with status, archive/unarchive, and per-project **board** and **list** views
+- **Projects** with status, archive/unarchive, and per-project **board**, **list** and **calendar** views
 - **Tasks** with status, priority, assignee, due dates, subtasks, and drag-and-drop on boards
 - **Labels** at project scope, attachable to tasks
 - **Comments** (soft-deleted for activity continuity)
 - **Activity** feed per workspace
+- **My work**: your assigned tasks across every project, grouped by due date
+- **Notifications** in the app for assignments, comments and status changes on your tasks
 - **Members** management with explicit project roles (no invitations)
 
 ## Running it
@@ -106,6 +108,9 @@ them before running against a database with data. To create a new migration with
 ### GitHub CI and Vercel deployment
 
 GitHub Actions runs API and web checks on pull requests and pushes to `main`.
+A third job runs the integration tests: it starts a throwaway PostgreSQL 16
+service, applies the committed migrations, starts the compiled API and runs
+`npm run test:integration`. It never touches the hosted database.
 The API Docker image build does not connect to the database. When a production
 container starts, it runs `prisma migrate deploy` before accepting requests.
 This applies only committed migrations. Set `DIRECT_URL` on the API host to the **direct connection URL for the
@@ -133,12 +138,12 @@ src/                    # Express API
   server.ts app.ts routes.ts env.ts
   lib/                  prisma, tokens, password, errors, http, pagination, rbac, …
   middleware/           requireAuth, errorHandler
-  modules/<auth|workspaces|projects|tasks|labels|comments|activity>/
+  modules/<auth|workspaces|projects|tasks|labels|comments|activity|notifications>/
                         *.routes.ts  *.controller.ts  *.service.ts  *.schema.ts
 
 web/                    # Vite + React app
   src/routes/           file-based TanStack Router routes (/login, /w/$workspaceId/…)
-  src/components/       ui primitives, app shell, tasks (board, list, panel), mobile
+  src/components/       ui primitives, app shell, tasks (board, list, calendar, panel), mobile
   src/lib/              api client, auth, query keys + options, mutations, design tokens
 
 prisma/                 schema and migrations
@@ -203,6 +208,12 @@ except register, login, and refresh.
 - `PATCH /comments/:commentId`, `DELETE /comments/:commentId`
 - `GET /workspaces/:workspaceId/activity`
 
+### Notifications
+
+- `GET /workspaces/:workspaceId/notifications` (`unread=true` for unread only)
+- `GET /workspaces/:workspaceId/notifications/summary` (`{ unread, overdue, dueToday }`)
+- `POST /workspaces/:workspaceId/notifications/read-all`, `PATCH /notifications/:notificationId` (`{ read }`)
+
 ### Roles
 
 TaskFlow uses `WORKSPACE_OWNER`, `ADMIN`, and `MEMBER`. Each workspace has
@@ -223,11 +234,12 @@ history); its values live as design tokens in `web/src/styles.css` and
 
 ### Integration tests
 
+CI runs this suite on every pull request (see above). Locally,
 `npm run test:integration` exercises the running API at `http://localhost:4000/api`
 (override with `TASKFLOW_TEST_API`). It creates unique test accounts/workspaces
 and cleans up only its own fixtures. It does not reset the database. Tests cover
 project isolation, role enforcement, seats, ownership transfer, comments, saved
-views, preference persistence, sessions, and the six-second Undo window.
+views, preference persistence, sessions, notifications, and the six-second Undo window.
 
 The initial migration defines the current schema. The existing hosted
 Prisma Postgres database was reset with user authorization during development;

@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+### Before you deploy
+
+- **Run the new migration** (`20261121130005_notifications`) before starting the updated API. It only adds the `Notification` table; existing data is untouched. The production container applies it on start (`prisma migrate deploy`); locally run `npm run db:migrate`.
+
+### Added
+
+- CI runs the API integration tests on every pull request and push to `main`, against a throwaway PostgreSQL 16 database with the committed migrations applied, using the compiled API as in production.
+- In-app notifications:
+  - You're notified when someone assigns you a task, comments on a task you created, are assigned to or have commented on, or moves a task you created or are assigned to into another status. Never for your own actions.
+  - A bell next to search in the sidebar shows the unread count (refreshed every minute and when you come back to the tab) and opens the latest notifications. Open all notifications, or the bell in the phone header, goes to a full Notifications page (also in ⌘K).
+  - All / Unread, mark one read or unread, Mark all read, and Load more. Clicking a notification marks it read and opens the task.
+  - A banner shows how many of your tasks are overdue or due today (in your profile's timezone), linking to My work. These are counted on request, not stored, so they never pile up.
+  - Notifications are checked against your access every time they're read: if you're removed from a project, its notifications disappear, and they return if you're added back. Deleting your account deletes your notifications.
+  - API: `GET /workspaces/:workspaceId/notifications` (`unread=true` to filter), `GET /workspaces/:workspaceId/notifications/summary` (`{ unread, overdue, dueToday }`), `POST /workspaces/:workspaceId/notifications/read-all`, `PATCH /notifications/:notificationId` with `{ read }`.
+- My work: a workspace page (in the sidebar, ⌘K and the phone menu) listing every task assigned to you across the projects you can open.
+  - Grouped into Overdue, Today, Next 7 days, Later and No due date, soonest and most urgent first. Each row shows its project, status, priority and due date.
+  - Tick the circle to mark a task done (or untick to reopen it to To do); click a row to open the task panel.
+  - Filter by project or by title and ID, and "Show completed" adds a Completed group. Filters are kept in the URL.
+  - Subtasks assigned to you are included and name their parent. Tasks in archived projects are left out.
+  - Uses the existing `GET /workspaces/:workspaceId/tasks?assigneeId=me`; there are no API changes.
+- Calendar view: a third project tab next to Board and List that shows tasks by due date, month by month (weeks start on Monday).
+  - Drag a task to another day to reschedule it, or onto "No due date" to clear its date. The "No due date" panel lists open tasks without a date; drag one onto a day to schedule it.
+  - The + on a day adds a task due that day, with the project's default status and priority.
+  - A day shows three tasks, then "+N more". Overdue tasks are red, and done and cancelled ones are muted with an icon.
+  - Search and filters work as on the board, and the month is kept in the URL (`?month=YYYY-MM`).
+  - On phones the calendar is a list of the month's days with tasks; dates change in the task panel.
+  - Like the board, the calendar shows top-level tasks only. It uses the existing task APIs; there are no API changes.
+
 ### Changed
 
 - Board redesign:

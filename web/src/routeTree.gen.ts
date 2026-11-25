@@ -18,12 +18,15 @@ import { Route as AppWWorkspaceIdIndexRouteImport } from './routes/_app/w/$works
 import { Route as AppWWorkspaceIdAccountRouteImport } from './routes/_app/w/$workspaceId/account'
 import { Route as AppWWorkspaceIdActivityRouteImport } from './routes/_app/w/$workspaceId/activity'
 import { Route as AppWWorkspaceIdMembersRouteImport } from './routes/_app/w/$workspaceId/members'
+import { Route as AppWWorkspaceIdMyWorkRouteImport } from './routes/_app/w/$workspaceId/my-work'
+import { Route as AppWWorkspaceIdNotificationsRouteImport } from './routes/_app/w/$workspaceId/notifications'
 import { Route as AppWWorkspaceIdProfileRouteImport } from './routes/_app/w/$workspaceId/profile'
 import { Route as AppWWorkspaceIdSettingsRouteImport } from './routes/_app/w/$workspaceId/settings'
 import { Route as AppWWorkspaceIdPProjectIdRouteRouteImport } from './routes/_app/w/$workspaceId/p/$projectId/route'
 import { Route as AppWWorkspaceIdPProjectIdIndexRouteImport } from './routes/_app/w/$workspaceId/p/$projectId/index'
 import { Route as AppWWorkspaceIdPProjectIdActivityRouteImport } from './routes/_app/w/$workspaceId/p/$projectId/activity'
 import { Route as AppWWorkspaceIdPProjectIdBoardRouteImport } from './routes/_app/w/$workspaceId/p/$projectId/board'
+import { Route as AppWWorkspaceIdPProjectIdCalendarRouteImport } from './routes/_app/w/$workspaceId/p/$projectId/calendar'
 import { Route as AppWWorkspaceIdPProjectIdListRouteImport } from './routes/_app/w/$workspaceId/p/$projectId/list'
 import { Route as AppWWorkspaceIdPProjectIdMembersRouteImport } from './routes/_app/w/$workspaceId/p/$projectId/members'
 import { Route as AppWWorkspaceIdPProjectIdSettingsRouteImport } from './routes/_app/w/$workspaceId/p/$projectId/settings'
@@ -72,6 +75,17 @@ const AppWWorkspaceIdMembersRoute = AppWWorkspaceIdMembersRouteImport.update({
   path: '/members',
   getParentRoute: () => AppWWorkspaceIdRouteRoute,
 } as any)
+const AppWWorkspaceIdMyWorkRoute = AppWWorkspaceIdMyWorkRouteImport.update({
+  id: '/my-work',
+  path: '/my-work',
+  getParentRoute: () => AppWWorkspaceIdRouteRoute,
+} as any)
+const AppWWorkspaceIdNotificationsRoute =
+  AppWWorkspaceIdNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AppWWorkspaceIdRouteRoute,
+  } as any)
 const AppWWorkspaceIdProfileRoute = AppWWorkspaceIdProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -106,6 +120,12 @@ const AppWWorkspaceIdPProjectIdBoardRoute =
     path: '/board',
     getParentRoute: () => AppWWorkspaceIdPProjectIdRouteRoute,
   } as any)
+const AppWWorkspaceIdPProjectIdCalendarRoute =
+  AppWWorkspaceIdPProjectIdCalendarRouteImport.update({
+    id: '/calendar',
+    path: '/calendar',
+    getParentRoute: () => AppWWorkspaceIdPProjectIdRouteRoute,
+  } as any)
 const AppWWorkspaceIdPProjectIdListRoute =
   AppWWorkspaceIdPProjectIdListRouteImport.update({
     id: '/list',
@@ -133,12 +153,15 @@ export interface FileRoutesByFullPath {
   '/w/$workspaceId/account': typeof AppWWorkspaceIdAccountRoute
   '/w/$workspaceId/activity': typeof AppWWorkspaceIdActivityRoute
   '/w/$workspaceId/members': typeof AppWWorkspaceIdMembersRoute
+  '/w/$workspaceId/my-work': typeof AppWWorkspaceIdMyWorkRoute
+  '/w/$workspaceId/notifications': typeof AppWWorkspaceIdNotificationsRoute
   '/w/$workspaceId/profile': typeof AppWWorkspaceIdProfileRoute
   '/w/$workspaceId/settings': typeof AppWWorkspaceIdSettingsRoute
   '/w/$workspaceId/': typeof AppWWorkspaceIdIndexRoute
   '/w/$workspaceId/p/$projectId': typeof AppWWorkspaceIdPProjectIdRouteRouteWithChildren
   '/w/$workspaceId/p/$projectId/activity': typeof AppWWorkspaceIdPProjectIdActivityRoute
   '/w/$workspaceId/p/$projectId/board': typeof AppWWorkspaceIdPProjectIdBoardRoute
+  '/w/$workspaceId/p/$projectId/calendar': typeof AppWWorkspaceIdPProjectIdCalendarRoute
   '/w/$workspaceId/p/$projectId/list': typeof AppWWorkspaceIdPProjectIdListRoute
   '/w/$workspaceId/p/$projectId/members': typeof AppWWorkspaceIdPProjectIdMembersRoute
   '/w/$workspaceId/p/$projectId/settings': typeof AppWWorkspaceIdPProjectIdSettingsRoute
@@ -151,11 +174,14 @@ export interface FileRoutesByTo {
   '/w/$workspaceId/account': typeof AppWWorkspaceIdAccountRoute
   '/w/$workspaceId/activity': typeof AppWWorkspaceIdActivityRoute
   '/w/$workspaceId/members': typeof AppWWorkspaceIdMembersRoute
+  '/w/$workspaceId/my-work': typeof AppWWorkspaceIdMyWorkRoute
+  '/w/$workspaceId/notifications': typeof AppWWorkspaceIdNotificationsRoute
   '/w/$workspaceId/profile': typeof AppWWorkspaceIdProfileRoute
   '/w/$workspaceId/settings': typeof AppWWorkspaceIdSettingsRoute
   '/w/$workspaceId': typeof AppWWorkspaceIdIndexRoute
   '/w/$workspaceId/p/$projectId/activity': typeof AppWWorkspaceIdPProjectIdActivityRoute
   '/w/$workspaceId/p/$projectId/board': typeof AppWWorkspaceIdPProjectIdBoardRoute
+  '/w/$workspaceId/p/$projectId/calendar': typeof AppWWorkspaceIdPProjectIdCalendarRoute
   '/w/$workspaceId/p/$projectId/list': typeof AppWWorkspaceIdPProjectIdListRoute
   '/w/$workspaceId/p/$projectId/members': typeof AppWWorkspaceIdPProjectIdMembersRoute
   '/w/$workspaceId/p/$projectId/settings': typeof AppWWorkspaceIdPProjectIdSettingsRoute
@@ -171,12 +197,15 @@ export interface FileRoutesById {
   '/_app/w/$workspaceId/account': typeof AppWWorkspaceIdAccountRoute
   '/_app/w/$workspaceId/activity': typeof AppWWorkspaceIdActivityRoute
   '/_app/w/$workspaceId/members': typeof AppWWorkspaceIdMembersRoute
+  '/_app/w/$workspaceId/my-work': typeof AppWWorkspaceIdMyWorkRoute
+  '/_app/w/$workspaceId/notifications': typeof AppWWorkspaceIdNotificationsRoute
   '/_app/w/$workspaceId/profile': typeof AppWWorkspaceIdProfileRoute
   '/_app/w/$workspaceId/settings': typeof AppWWorkspaceIdSettingsRoute
   '/_app/w/$workspaceId/': typeof AppWWorkspaceIdIndexRoute
   '/_app/w/$workspaceId/p/$projectId': typeof AppWWorkspaceIdPProjectIdRouteRouteWithChildren
   '/_app/w/$workspaceId/p/$projectId/activity': typeof AppWWorkspaceIdPProjectIdActivityRoute
   '/_app/w/$workspaceId/p/$projectId/board': typeof AppWWorkspaceIdPProjectIdBoardRoute
+  '/_app/w/$workspaceId/p/$projectId/calendar': typeof AppWWorkspaceIdPProjectIdCalendarRoute
   '/_app/w/$workspaceId/p/$projectId/list': typeof AppWWorkspaceIdPProjectIdListRoute
   '/_app/w/$workspaceId/p/$projectId/members': typeof AppWWorkspaceIdPProjectIdMembersRoute
   '/_app/w/$workspaceId/p/$projectId/settings': typeof AppWWorkspaceIdPProjectIdSettingsRoute
@@ -192,12 +221,15 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/account'
     | '/w/$workspaceId/activity'
     | '/w/$workspaceId/members'
+    | '/w/$workspaceId/my-work'
+    | '/w/$workspaceId/notifications'
     | '/w/$workspaceId/profile'
     | '/w/$workspaceId/settings'
     | '/w/$workspaceId/'
     | '/w/$workspaceId/p/$projectId'
     | '/w/$workspaceId/p/$projectId/activity'
     | '/w/$workspaceId/p/$projectId/board'
+    | '/w/$workspaceId/p/$projectId/calendar'
     | '/w/$workspaceId/p/$projectId/list'
     | '/w/$workspaceId/p/$projectId/members'
     | '/w/$workspaceId/p/$projectId/settings'
@@ -210,11 +242,14 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/account'
     | '/w/$workspaceId/activity'
     | '/w/$workspaceId/members'
+    | '/w/$workspaceId/my-work'
+    | '/w/$workspaceId/notifications'
     | '/w/$workspaceId/profile'
     | '/w/$workspaceId/settings'
     | '/w/$workspaceId'
     | '/w/$workspaceId/p/$projectId/activity'
     | '/w/$workspaceId/p/$projectId/board'
+    | '/w/$workspaceId/p/$projectId/calendar'
     | '/w/$workspaceId/p/$projectId/list'
     | '/w/$workspaceId/p/$projectId/members'
     | '/w/$workspaceId/p/$projectId/settings'
@@ -229,12 +264,15 @@ export interface FileRouteTypes {
     | '/_app/w/$workspaceId/account'
     | '/_app/w/$workspaceId/activity'
     | '/_app/w/$workspaceId/members'
+    | '/_app/w/$workspaceId/my-work'
+    | '/_app/w/$workspaceId/notifications'
     | '/_app/w/$workspaceId/profile'
     | '/_app/w/$workspaceId/settings'
     | '/_app/w/$workspaceId/'
     | '/_app/w/$workspaceId/p/$projectId'
     | '/_app/w/$workspaceId/p/$projectId/activity'
     | '/_app/w/$workspaceId/p/$projectId/board'
+    | '/_app/w/$workspaceId/p/$projectId/calendar'
     | '/_app/w/$workspaceId/p/$projectId/list'
     | '/_app/w/$workspaceId/p/$projectId/members'
     | '/_app/w/$workspaceId/p/$projectId/settings'
@@ -312,6 +350,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWWorkspaceIdMembersRouteImport
       parentRoute: typeof AppWWorkspaceIdRouteRoute
     }
+    '/_app/w/$workspaceId/my-work': {
+      id: '/_app/w/$workspaceId/my-work'
+      path: '/my-work'
+      fullPath: '/w/$workspaceId/my-work'
+      preLoaderRoute: typeof AppWWorkspaceIdMyWorkRouteImport
+      parentRoute: typeof AppWWorkspaceIdRouteRoute
+    }
+    '/_app/w/$workspaceId/notifications': {
+      id: '/_app/w/$workspaceId/notifications'
+      path: '/notifications'
+      fullPath: '/w/$workspaceId/notifications'
+      preLoaderRoute: typeof AppWWorkspaceIdNotificationsRouteImport
+      parentRoute: typeof AppWWorkspaceIdRouteRoute
+    }
     '/_app/w/$workspaceId/profile': {
       id: '/_app/w/$workspaceId/profile'
       path: '/profile'
@@ -354,6 +406,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWWorkspaceIdPProjectIdBoardRouteImport
       parentRoute: typeof AppWWorkspaceIdPProjectIdRouteRoute
     }
+    '/_app/w/$workspaceId/p/$projectId/calendar': {
+      id: '/_app/w/$workspaceId/p/$projectId/calendar'
+      path: '/calendar'
+      fullPath: '/w/$workspaceId/p/$projectId/calendar'
+      preLoaderRoute: typeof AppWWorkspaceIdPProjectIdCalendarRouteImport
+      parentRoute: typeof AppWWorkspaceIdPProjectIdRouteRoute
+    }
     '/_app/w/$workspaceId/p/$projectId/list': {
       id: '/_app/w/$workspaceId/p/$projectId/list'
       path: '/list'
@@ -381,6 +440,7 @@ declare module '@tanstack/react-router' {
 interface AppWWorkspaceIdPProjectIdRouteRouteChildren {
   AppWWorkspaceIdPProjectIdActivityRoute: typeof AppWWorkspaceIdPProjectIdActivityRoute
   AppWWorkspaceIdPProjectIdBoardRoute: typeof AppWWorkspaceIdPProjectIdBoardRoute
+  AppWWorkspaceIdPProjectIdCalendarRoute: typeof AppWWorkspaceIdPProjectIdCalendarRoute
   AppWWorkspaceIdPProjectIdListRoute: typeof AppWWorkspaceIdPProjectIdListRoute
   AppWWorkspaceIdPProjectIdMembersRoute: typeof AppWWorkspaceIdPProjectIdMembersRoute
   AppWWorkspaceIdPProjectIdSettingsRoute: typeof AppWWorkspaceIdPProjectIdSettingsRoute
@@ -392,6 +452,8 @@ const AppWWorkspaceIdPProjectIdRouteRouteChildren: AppWWorkspaceIdPProjectIdRout
     AppWWorkspaceIdPProjectIdActivityRoute:
       AppWWorkspaceIdPProjectIdActivityRoute,
     AppWWorkspaceIdPProjectIdBoardRoute: AppWWorkspaceIdPProjectIdBoardRoute,
+    AppWWorkspaceIdPProjectIdCalendarRoute:
+      AppWWorkspaceIdPProjectIdCalendarRoute,
     AppWWorkspaceIdPProjectIdListRoute: AppWWorkspaceIdPProjectIdListRoute,
     AppWWorkspaceIdPProjectIdMembersRoute:
       AppWWorkspaceIdPProjectIdMembersRoute,
@@ -409,6 +471,8 @@ interface AppWWorkspaceIdRouteRouteChildren {
   AppWWorkspaceIdAccountRoute: typeof AppWWorkspaceIdAccountRoute
   AppWWorkspaceIdActivityRoute: typeof AppWWorkspaceIdActivityRoute
   AppWWorkspaceIdMembersRoute: typeof AppWWorkspaceIdMembersRoute
+  AppWWorkspaceIdMyWorkRoute: typeof AppWWorkspaceIdMyWorkRoute
+  AppWWorkspaceIdNotificationsRoute: typeof AppWWorkspaceIdNotificationsRoute
   AppWWorkspaceIdProfileRoute: typeof AppWWorkspaceIdProfileRoute
   AppWWorkspaceIdSettingsRoute: typeof AppWWorkspaceIdSettingsRoute
   AppWWorkspaceIdIndexRoute: typeof AppWWorkspaceIdIndexRoute
@@ -419,6 +483,8 @@ const AppWWorkspaceIdRouteRouteChildren: AppWWorkspaceIdRouteRouteChildren = {
   AppWWorkspaceIdAccountRoute: AppWWorkspaceIdAccountRoute,
   AppWWorkspaceIdActivityRoute: AppWWorkspaceIdActivityRoute,
   AppWWorkspaceIdMembersRoute: AppWWorkspaceIdMembersRoute,
+  AppWWorkspaceIdMyWorkRoute: AppWWorkspaceIdMyWorkRoute,
+  AppWWorkspaceIdNotificationsRoute: AppWWorkspaceIdNotificationsRoute,
   AppWWorkspaceIdProfileRoute: AppWWorkspaceIdProfileRoute,
   AppWWorkspaceIdSettingsRoute: AppWWorkspaceIdSettingsRoute,
   AppWWorkspaceIdIndexRoute: AppWWorkspaceIdIndexRoute,
