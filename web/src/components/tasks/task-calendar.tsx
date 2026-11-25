@@ -340,7 +340,7 @@ function ChipBody({ task, today, className }: { task: Task; today: string; class
       ) : cancelled ? (
         <Ban size={12} className="shrink-0 text-muted" aria-hidden />
       ) : (
-        <StatusDot status={task.status} className="size-2" />
+        <StatusDot status={task.status} />
       )}
       <span
         className={cn(
@@ -527,32 +527,36 @@ function Unscheduled({
       ref={setNodeRef}
       aria-label="Tasks with no due date"
       className={cn(
-        "flex w-[260px] shrink-0 flex-col gap-2 overflow-y-auto border-l border-line bg-lane p-3",
+        "w-[260px] shrink-0 border-l border-line bg-lane",
         dragging && "ring-2 ring-accent-line ring-inset",
         isOver && "bg-accent-tint",
       )}
     >
-      <div className="flex flex-col gap-0.5">
-        <h3 className="m-0 text-sm font-semibold">
-          No due date <span className="text-xs font-medium text-muted">{tasks.length}</span>
-        </h3>
-        {editable ? (
-          <p className="m-0 text-xs text-muted">
-            {dragging ? "Drop here to clear the due date." : "Drag a task onto a day to schedule it."}
-          </p>
-        ) : null}
+      {/* The page scrolls as a whole, so the list sticks in view and scrolls
+          on its own instead of stretching the page with every open task. */}
+      <div className="sticky top-0 flex max-h-svh flex-col gap-2 overflow-y-auto p-3">
+        <div className="flex flex-col gap-0.5">
+          <h3 className="m-0 text-sm font-semibold">
+            No due date <span className="text-xs font-medium text-muted">{tasks.length}</span>
+          </h3>
+          {editable ? (
+            <p className="m-0 text-xs text-muted">
+              {dragging ? "Drop here to clear the due date." : "Drag a task onto a day to schedule it."}
+            </p>
+          ) : null}
+        </div>
+        {tasks.map((task) => (
+          <Chip
+            key={task.id}
+            task={task}
+            today={today}
+            editable={editable}
+            selected={task.id === selectedId}
+            onOpen={() => onOpen(task.id)}
+          />
+        ))}
+        {tasks.length === 0 ? <p className="m-0 text-xs text-muted">Every open task has a due date.</p> : null}
       </div>
-      {tasks.map((task) => (
-        <Chip
-          key={task.id}
-          task={task}
-          today={today}
-          editable={editable}
-          selected={task.id === selectedId}
-          onOpen={() => onOpen(task.id)}
-        />
-      ))}
-      {tasks.length === 0 ? <p className="m-0 text-xs text-muted">Every open task has a due date.</p> : null}
     </aside>
   );
 }

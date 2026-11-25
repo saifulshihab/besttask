@@ -4,7 +4,7 @@ import { Ban, Check, CircleCheck, Search } from "lucide-react";
 import { useMemo } from "react";
 import { z } from "zod";
 import { Page, PageHeader } from "@/components/page";
-import { PriorityBars, StatusDot } from "@/components/tasks/task-badges";
+import { PriorityChip, StatusDot } from "@/components/tasks/task-badges";
 import { TaskPanel } from "@/components/tasks/task-panel";
 import { MenuItem, MenuPopup, MenuRoot, MenuTrigger } from "@/components/ui/menu";
 import { cn } from "@/lib/cn";
@@ -262,15 +262,11 @@ function MyTaskRow({
       </button>
 
       <span className="hidden items-center gap-1.5 text-xs text-ink-2 sm:inline-flex" title={STATUSES[task.status].name}>
-        <StatusDot status={task.status} className="size-2" />
+        <StatusDot status={task.status} />
         <span className="w-[74px] truncate">{STATUSES[task.status].name}</span>
       </span>
-      <span
-        className={cn("hidden sm:inline-flex", PRIORITIES[task.priority].hot ? "text-danger" : "text-ink-2")}
-        title={`${PRIORITIES[task.priority].name} priority`}
-      >
-        <PriorityBars priority={task.priority} />
-        <span className="sr-only">{PRIORITIES[task.priority].name} priority</span>
+      <span className="hidden w-[84px] shrink-0 sm:inline-flex" title={`${PRIORITIES[task.priority].name} priority`}>
+        <PriorityChip priority={task.priority} />
       </span>
       <span
         className={cn(
