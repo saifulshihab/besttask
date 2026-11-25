@@ -8,6 +8,7 @@
 
 ### Added
 
+- "Try the demo" on the sign-in page: fills in the shared demo account (`besttask@gmail.com`) and signs in. The account must exist in the target database; it is an ordinary account shared by every visitor, so anyone using it can change or delete it.
 - CI runs the API integration tests on every pull request and push to `main`, against a throwaway PostgreSQL 16 database with the committed migrations applied, using the compiled API as in production.
 - In-app notifications:
   - You're notified when someone assigns you a task, comments on a task you created, are assigned to or have commented on, or moves a task you created or are assigned to into another status. Never for your own actions.

@@ -10,6 +10,9 @@ import type { AuthResponse } from "@/lib/types";
 
 type Mode = "login" | "register";
 
+/** The shared demo account behind "Try the demo"; public by design. */
+const DEMO = { email: "besttask@gmail.com", password: "12345678" };
+
 const copy = {
   login: {
     title: "Sign in to BestTask",
@@ -38,15 +41,14 @@ export function AuthForm({ mode, next }: { mode: Mode; next?: string }) {
   const [error, setError] = useState<ApiError | null>(null);
   const text = copy[mode];
 
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
+  const send = async (credentials: { email: string; password: string }) => {
     setPending(true);
     setError(null);
     try {
       const result = await api<AuthResponse>(`/auth/${mode}`, {
         method: "POST",
         anonymous: true,
-        body: mode === "login" ? { email, password } : { name, email, password },
+        body: mode === "login" ? credentials : { name, ...credentials },
       });
       // A previous user's cached data must not leak into this session.
       qc.clear();
@@ -64,6 +66,18 @@ export function AuthForm({ mode, next }: { mode: Mode; next?: string }) {
     } finally {
       setPending(false);
     }
+  };
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    void send({ email, password });
+  };
+
+  // Shows the demo credentials in the fields, then signs in with them.
+  const tryDemo = () => {
+    setEmail(DEMO.email);
+    setPassword(DEMO.password);
+    void send(DEMO);
   };
 
   const fieldError = (path: string) => error?.fieldErrors[path];
@@ -124,6 +138,16 @@ export function AuthForm({ mode, next }: { mode: Mode; next?: string }) {
           <Button type="submit" variant="primary" size="xl" disabled={pending} className="justify-center">
             {pending ? "Please wait…" : text.submit}
           </Button>
+          {mode === "login" ? (
+            <button
+              type="button"
+              onClick={tryDemo}
+              disabled={pending}
+              className="h-9 rounded-md text-sm font-medium text-accent-hover hover:bg-hover disabled:opacity-60"
+            >
+              Try the demo
+            </button>
+          ) : null}
         </form>
         <p className="m-0 text-center text-sm text-muted">
           {text.switchText}{" "}
