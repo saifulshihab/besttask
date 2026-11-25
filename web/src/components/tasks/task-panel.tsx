@@ -49,7 +49,12 @@ import type { Comment, Label, Priority, ProjectDetail, Task } from "@/lib/types"
 import { Checkbox } from "@/components/ui/checkbox";
 
 const PRIORITY_ORDER: Priority[] = ["URGENT", "HIGH", "MEDIUM", "LOW"];
-const control = "max-w-[240px] flex-1 border-line";
+/** A borderless field inside the properties card; it shows a fill on hover or while open. */
+const control =
+  "h-9 flex-1 border-transparent bg-transparent px-2 hover:border-transparent hover:bg-hover data-[popup-open]:border-transparent data-[popup-open]:bg-hover";
+const propertyLabel = "pl-3 text-sm text-muted";
+/** Small uppercase section heading. */
+const sectionHeading = "m-0 text-xs font-semibold tracking-[0.05em] text-muted uppercase";
 const SAVED_FOR_MS = 60_000;
 
 /**
@@ -230,8 +235,8 @@ function PanelBody({
         ) : null}
         <TitleField task={task} disabled={!editable} onSave={(title) => save({ title })} />
 
-        <div className="grid grid-cols-[110px_minmax(0,1fr)] items-center gap-x-3 gap-y-2">
-          <label htmlFor="p-status" className="text-sm text-muted">Status</label>
+        <div className="grid grid-cols-[96px_minmax(0,1fr)] items-center gap-x-1 rounded-xl border border-line bg-sidebar p-1">
+          <label htmlFor="p-status" className={propertyLabel}>Status</label>
           <Select
             id="p-status"
             size="sm"
@@ -242,7 +247,7 @@ function PanelBody({
             options={STATUS_ORDER.map((s) => ({ value: s, label: STATUSES[s].name, icon: <StatusDot status={s} /> }))}
           />
 
-          <label htmlFor="p-pri" className="text-sm text-muted">Priority</label>
+          <label htmlFor="p-pri" className={propertyLabel}>Priority</label>
           <Select
             id="p-pri"
             size="sm"
@@ -253,8 +258,8 @@ function PanelBody({
             options={PRIORITY_ORDER.map((p) => ({ value: p, label: PRIORITIES[p].name, icon: <PriorityIcon priority={p} /> }))}
           />
 
-          <label htmlFor="p-asg" className="text-sm text-muted">Assignee</label>
-          <div className="flex flex-wrap items-center gap-2">
+          <label htmlFor="p-asg" className={propertyLabel}>Assignee</label>
+          <div className="flex items-center gap-1">
             <Select
               id="p-asg"
               size="sm"
@@ -275,15 +280,15 @@ function PanelBody({
               <button
                 type="button"
                 onClick={() => save({ assigneeId: me.id })}
-                className="h-[30px] rounded-sm px-2 text-sm font-medium text-accent-hover hover:bg-hover"
+                className="h-8 shrink-0 rounded-md px-2 text-sm font-medium whitespace-nowrap text-accent-hover hover:bg-hover"
               >
                 Assign to me
               </button>
             ) : null}
           </div>
 
-          <label htmlFor="p-due" className="text-sm text-muted">Due date</label>
-          <div className="flex items-center gap-2">
+          <label htmlFor="p-due" className={propertyLabel}>Due date</label>
+          <div className="flex items-center gap-1">
             <DatePicker
               id="p-due"
               size="sm"
@@ -297,14 +302,14 @@ function PanelBody({
               <button
                 type="button"
                 onClick={() => save({ dueDate: null })}
-                className="h-[30px] rounded-sm px-2 text-sm text-muted hover:bg-hover"
+                className="h-8 shrink-0 rounded-md px-2 text-sm text-muted hover:bg-hover"
               >
                 Clear
               </button>
             ) : null}
           </div>
 
-          <span className="text-sm text-muted">Labels</span>
+          <span className={propertyLabel}>Labels</span>
           <LabelsField
             projectId={project.id}
             task={task}
@@ -392,7 +397,7 @@ function TitleField({
             e.currentTarget.blur();
           }
         }}
-        className="-mx-1.5 field-sizing-content resize-none rounded-md border border-transparent bg-transparent px-1.5 py-1 text-[24px] leading-[1.3] font-bold tracking-[-0.01em] text-ink hover:border-line focus:border-accent focus:outline-none disabled:opacity-100"
+        className="-mx-1.5 field-sizing-content resize-none rounded-md border border-transparent bg-transparent px-1.5 py-1 text-[24px] leading-[1.3] font-semibold tracking-[-0.01em] text-ink hover:border-line focus:border-accent focus:outline-none disabled:opacity-100"
       />
     </label>
   );
@@ -416,9 +421,9 @@ function DescriptionField({
   }
   return (
     <label className="flex flex-col gap-2">
-      <span className="text-sm font-semibold">Description</span>
+      <span className={sectionHeading}>Description</span>
       <textarea
-        rows={4}
+        rows={3}
         value={draft}
         disabled={disabled}
         onChange={(e) => setDraft(e.target.value)}
@@ -427,7 +432,7 @@ function DescriptionField({
           if (next !== current.trim()) onSave(next || null);
         }}
         placeholder="Add details, links or acceptance criteria…"
-        className="field-sizing-content resize-none max-h-[420px] min-h-[110px] rounded-md border border-line px-3 py-2.5 text-base leading-normal text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+        className="field-sizing-content resize-none max-h-[420px] min-h-19 rounded-lg border border-line bg-transparent px-3.5 py-3 text-base leading-normal text-ink placeholder:text-faint focus:border-accent focus:outline-none"
       />
     </label>
   );
@@ -483,7 +488,7 @@ function LabelsField({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex min-h-10 flex-wrap items-center gap-1.5 px-2 py-1.5">
       {task.labels.map((l) => (
         <span
           key={l.id}
@@ -625,9 +630,9 @@ function Subtasks({
   };
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <h2 className="m-0 text-sm font-semibold">Subtasks</h2>
+        <h2 className={sectionHeading}>Subtasks</h2>
         <span className="text-xs text-muted">
           {subtasks.length ? `${done} of ${subtasks.length} done` : "None yet"}
         </span>
@@ -659,7 +664,7 @@ function Subtasks({
       })}
       {editable ? (
         <form onSubmit={add} className="flex gap-2">
-          <label className="flex h-[38px] flex-1 items-center gap-2.5 rounded-md border border-dashed border-line-strong px-3 text-muted focus-within:border-accent">
+          <label className="flex h-11 flex-1 items-center gap-2.5 rounded-lg border border-dashed border-line-strong px-3.5 text-muted focus-within:border-accent">
             <Plus size={14} aria-hidden />
             <span className="sr-only">New subtask</span>
             <input
@@ -739,15 +744,18 @@ function Timeline({
   const count = comments.data?.length ?? 0;
   const tabClass = (on: boolean) =>
     cn(
-      "-mb-px border-0 border-b-2 bg-transparent px-2.5 py-2 text-sm",
-      on ? "border-accent font-semibold text-ink" : "border-transparent text-muted hover:text-ink",
+      "h-7 rounded-md border-0 px-2.5 text-xs",
+      on ? "bg-canvas font-semibold text-ink shadow-card" : "bg-transparent font-medium text-muted hover:text-ink",
     );
 
   return (
     <div className="flex flex-col gap-3">
-      <div role="tablist" aria-label="Task timeline" className="flex gap-1 border-b border-line">
+      <div className="flex items-center gap-3">
+        <h2 className={sectionHeading}>Activity</h2>
+        <span className="flex-1" />
+        <div role="tablist" aria-label="Task timeline" className="flex gap-0.5 rounded-lg bg-hover p-0.5">
         <button type="button" role="tab" aria-selected={tab === "all"} onClick={() => setTab("all")} className={tabClass(tab === "all")}>
-          All activity
+          All
         </button>
         <button
           type="button"
@@ -758,6 +766,7 @@ function Timeline({
         >
           Comments{count ? ` (${count})` : ""}
         </button>
+        </div>
       </div>
       <ol className="m-0 flex list-none flex-col gap-3 p-0 text-sm text-ink-2">
         {visible.map((item) =>
@@ -901,21 +910,24 @@ function CommentComposer({
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit();
   };
   return (
-    <form onSubmit={submit} className="flex items-end gap-2.5 border-t border-line px-5 py-3.5">
-      <Avatar user={me} className="mb-1.5" />
+    <form
+      onSubmit={submit}
+      className="mx-4 mb-4 flex items-end gap-2 rounded-xl border border-line-strong bg-sidebar p-1 pl-1.5 focus-within:border-accent"
+    >
+      <Avatar user={me} className="mb-2 ml-1" />
       <label className="flex flex-1 flex-col">
         <span className="sr-only">Comment</span>
         <textarea
-          rows={2}
+          rows={1}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder="Leave a comment…"
           aria-keyshortcuts="Control+Enter Meta+Enter"
-          className="field-sizing-content resize-none max-h-[200px] min-h-[66px] rounded-md border border-line px-3 py-2.5 text-base text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+          className="field-sizing-content resize-none max-h-[200px] min-h-11 border-0 bg-transparent px-1.5 py-3 text-base text-ink placeholder:text-faint focus:outline-none"
         />
       </label>
-      <Button type="submit" variant="primary" size="xl" className="text-sm" disabled={!draft.trim() || create.isPending}>
+      <Button type="submit" variant="primary" className="h-11 text-sm" disabled={!draft.trim() || create.isPending}>
         Comment
       </Button>
     </form>
