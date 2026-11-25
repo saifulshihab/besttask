@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { api, ApiError } from "@/lib/api";
-import { setTokens } from "@/lib/auth";
+import { mayReturnTo, setTokens } from "@/lib/auth";
 import { keys } from "@/lib/queries";
 import type { AuthResponse } from "@/lib/types";
 
@@ -54,8 +54,12 @@ export function AuthForm({ mode, next }: { mode: Mode; next?: string }) {
       qc.clear();
       qc.setQueryData(keys.me, result.user);
       setTokens(result.tokens);
-      // Only same-app paths are followed, never an absolute URL.
-      const target = next?.startsWith("/") && !next.startsWith("//") ? next : "/";
+      // Only same-app paths are followed, never an absolute URL, and never a
+      // page left behind by a different account.
+      const target =
+        next?.startsWith("/") && !next.startsWith("//") && mayReturnTo(next, result.user.id)
+          ? next
+          : "/";
       await navigate({ href: target, replace: true });
     } catch (caught) {
       setError(

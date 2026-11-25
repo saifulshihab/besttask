@@ -42,6 +42,51 @@ export const clearTokens = () => {
 
 export const hasSession = () => getTokens() !== null;
 
+/**
+ * True only while this tab signs out on purpose. Session listeners run
+ * synchronously inside `clearTokens`, so they can tell a deliberate sign-out
+ * (start fresh) from an expired session (return to the page afterwards).
+ */
+let signingOut = false;
+export const isDeliberateSignOut = () => signingOut;
+export const clearTokensDeliberately = () => {
+  signingOut = true;
+  try {
+    clearTokens();
+  } finally {
+    signingOut = false;
+  }
+};
+
+/**
+ * The page to return to after sign-in belongs to whoever was signed in when it
+ * was recorded. Stored per tab with the path, so a different account signing
+ * in next does not land on a workspace it cannot open.
+ */
+const RETURN_KEY = "bt_return_to";
+
+export const rememberReturnOwner = (next: string, userId: string) => {
+  try {
+    sessionStorage.setItem(RETURN_KEY, JSON.stringify({ next, userId }));
+  } catch {
+    // Without storage the path is simply followed, as before.
+  }
+};
+
+/** Whether `next` may be followed by `userId`; also forgets the record. */
+export const mayReturnTo = (next: string, userId: string) => {
+  try {
+    const raw = sessionStorage.getItem(RETURN_KEY);
+    sessionStorage.removeItem(RETURN_KEY);
+    const owner = raw ? (JSON.parse(raw) as { next?: string; userId?: string }) : null;
+    // A path recorded for another user is theirs; any other path (a link
+    // opened while signed out) belongs to nobody in particular.
+    return !(owner?.next === next && owner.userId !== userId);
+  } catch {
+    return true;
+  }
+};
+
 export const onSessionChange = (listener: () => void) => {
   listeners.add(listener);
   const onStorage = (event: StorageEvent) => {

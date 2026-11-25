@@ -47,6 +47,7 @@
 
 ### Fixed
 
+- Signing out and then into a different account no longer opens the previous account's page and shows "Workspace not available". Signing out now always returns to your default workspace after the next sign-in; after an expired session (or a sign-out in another tab) you still come back to the page you were on, but only if the same account signs in again.
 - Profile photos now show wherever a person appears (board cards, list rows, comments, activity), filled in from member lists the app already loads.
 
 ## 2026-11-18 — New web app and backend upgrade

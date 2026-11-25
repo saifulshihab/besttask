@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
-import { clearTokens, getTokens } from "./auth";
+import { clearTokensDeliberately, getTokens } from "./auth";
 import { keys } from "./queries";
 import type { Priority, Project, Task, TaskStatus, Workspace } from "./types";
 
@@ -200,6 +200,6 @@ export const signOut = async () => {
         anonymous: true,
       });
   } finally {
-    clearTokens();
+    clearTokensDeliberately();
   }
 };

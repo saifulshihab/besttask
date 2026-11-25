@@ -3,8 +3,15 @@ import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouteError } from "@/components/route-error";
-import { hasSession, onSessionChange } from "@/lib/auth";
+import {
+  hasSession,
+  isDeliberateSignOut,
+  onSessionChange,
+  rememberReturnOwner,
+} from "@/lib/auth";
+import { keys } from "@/lib/queries";
 import { queryClient } from "@/lib/query-client";
+import type { Me } from "@/lib/types";
 import { routeTree } from "./routeTree.gen";
 import "./styles.css";
 
@@ -36,13 +43,18 @@ onSessionChange(() => {
   }
   const { pathname, href } = router.state.location;
   const onAuthPage = pathname === "/login" || pathname === "/register";
+  // A deliberate sign-out starts fresh. Otherwise (expired session, sign-out
+  // in another tab) come back here after sign-in, but only as the same user.
+  const next = isDeliberateSignOut() || href === "/" ? undefined : href;
+  const userId = queryClient.getQueryData<Me>(keys.me)?.id;
+  if (next && userId) rememberReturnOwner(next, userId);
   // Leave the signed-in pages first, so their queries unmount instead of
   // refetching without a token, then drop the previous user's data.
   void (onAuthPage
     ? Promise.resolve()
     : router.navigate({
         to: "/login",
-        search: href === "/" ? {} : { next: href },
+        search: next ? { next } : {},
         replace: true,
       })
   ).then(() => queryClient.clear());
