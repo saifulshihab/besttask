@@ -155,7 +155,7 @@ All allowed task actions below apply to accessible, active projects. Admins/memb
 | A04 | Delete own comment | ✅ | ✅ | ✅ | Own comments only, within accessible, active projects. |
 | A05 | Edit or delete someone else's comment | ❌ | ❌ | ❌ | Not allowed for any role, including the workspace owner. |
 | A06 | View project activity | ✅ | ✅ | ✅ | Only accessible projects. Opened from the project links in the sidebar. |
-| A07 | View workspace activity | ❌ | ❌ | ❌ | Removed. Activity is read per project under A06. |
+| A07 | View workspace activity | ❌ | ❌ | ❌ | Removed. Activity is read per project under A06; workspace-level events (workspace settings, workspace members, ownership) are not recorded. A purged project's activity is deleted with it. |
 | A08 | Filter activity by project and event type | ❌ | ❌ | ❌ | Removed with workspace activity (A07). The project feed is scoped to its project and has no filters; task list filters under V03 remain available to all roles. |
 | A09 | Open a task from an activity entry | ✅ | ✅ | ✅ | Subject to current task access and existence. |
 | A10 | Manually edit or delete audit/activity records | ❌ | ❌ | ❌ | Not allowed for any role. |

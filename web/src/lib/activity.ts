@@ -128,22 +128,6 @@ export const describe = (event: ActivityEvent): ActivityEntry[] => {
       return one({ verb: "deleted the channel", target: title && `#${title}`, type: "deleted" });
     case "channel.restored":
       return one({ verb: "restored a deleted channel", type: "other" });
-    case "member.added":
-      return one({ verb: "added", target: person(m.userId), tail: " to the workspace", type: "other" });
-    case "member.deactivated":
-      return one({ verb: "deactivated", target: person(m.userId), type: "other" });
-    case "member.reactivated":
-      return one({ verb: "reactivated", target: person(m.userId), type: "other" });
-    case "membership.deleted":
-      return one({ verb: "removed a member from the workspace", type: "deleted" });
-    case "membership.restored":
-      return one({ verb: "restored a removed member", type: "other" });
-    case "workspace.created":
-      return one({ verb: "created the workspace", target: title, type: "other" });
-    case "workspace.updated":
-      return one({ verb: "updated workspace settings", type: "other" });
-    case "workspace.ownership_transferred":
-      return one({ verb: "transferred workspace ownership to", target: person(m.newOwnerId), type: "other" });
     default:
       return one({ verb: event.action.replace(/[._]/g, " "), type: "other" });
   }

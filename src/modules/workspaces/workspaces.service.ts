@@ -1,4 +1,3 @@
-import { recordActivity } from "../../lib/activity.js";
 import { prisma } from "../../lib/prisma.js";
 import { requireMembership, visibleProjects } from "../../lib/rbac.js";
 import { badRequest, conflict, notFound } from "../../lib/errors.js";
@@ -33,14 +32,6 @@ export const create = async (actor: Actor, input: CreateWorkspaceInput) => {
       ownerId: actor.id,
       memberships: { create: { userId: actor.id } },
     },
-  });
-  await recordActivity({
-    workspaceId: workspace.id,
-    actorId: actor.id,
-    entityType: "workspace",
-    entityId: workspace.id,
-    action: "workspace.created",
-    metadata: { name: workspace.name },
   });
   return { ...workspace, role: Role.WORKSPACE_OWNER };
 };
@@ -83,14 +74,6 @@ export const update = async (
 ) => {
   await requireMembership(actor.id, id, Role.WORKSPACE_OWNER);
   const updated = await prisma.workspace.update({ where: { id }, data: input });
-  await recordActivity({
-    workspaceId: id,
-    actorId: actor.id,
-    entityType: "workspace",
-    entityId: id,
-    action: "workspace.updated",
-    metadata: input,
-  });
   return updated;
 };
 export const remove = async (actor: Actor, id: string) => {
@@ -152,14 +135,6 @@ export const addMember = async (
     data: { workspaceId, userId: user.id },
     include: { user: { select: userSelect } },
   });
-  await recordActivity({
-    workspaceId,
-    actorId: actor.id,
-    entityType: "membership",
-    entityId: added.id,
-    action: "member.added",
-    metadata: { userId: user.id },
-  });
   return added;
 };
 export const updateMemberRole = async (
@@ -198,17 +173,6 @@ export const updateMemberRole = async (
       data: { active },
       include: { user: { select: userSelect } },
     });
-    await recordActivity(
-      {
-        workspaceId,
-        actorId: actor.id,
-        entityType: "membership",
-        entityId: target.id,
-        action: active ? "member.reactivated" : "member.deactivated",
-        metadata: { userId },
-      },
-      tx,
-    );
     return updated;
   });
   realtime.syncWorkspace(workspaceId);
@@ -292,17 +256,6 @@ export const transfer = async (
       },
       data: { assigneeId: null },
     });
-    await recordActivity(
-      {
-        workspaceId,
-        actorId: actor.id,
-        entityType: "workspace",
-        entityId: workspaceId,
-        action: "workspace.ownership_transferred",
-        metadata: { newOwnerId: userId },
-      },
-      tx,
-    );
     return { transferred: true };
   });
   realtime.syncWorkspace(workspaceId);

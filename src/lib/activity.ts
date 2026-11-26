@@ -2,7 +2,6 @@ import { prisma } from "./prisma.js";
 import type { Prisma } from "../generated/prisma/client.js";
 
 export type EntityType =
-  | "workspace"
   | "membership"
   | "project"
   | "task"
@@ -12,7 +11,11 @@ export type EntityType =
 
 export interface ActivityInput {
   workspaceId: string;
-  projectId?: string;
+  /**
+   * Activity is read per project only, so every event belongs to one; there
+   * are no workspace-level events.
+   */
+  projectId: string;
   actorId: string | null;
   entityType: EntityType;
   entityId: string;

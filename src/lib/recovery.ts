@@ -75,18 +75,20 @@ export const scheduleDeletion = async (
         data: { assigneeId: null },
       });
     }
-    await recordActivity(
-      {
-        workspaceId,
-        projectId,
-        actorId: actor.id,
-        entityType: entityType as RecoverableType,
-        entityId,
-        action: entityType + ".deleted",
-        ...(metadata === undefined ? {} : { metadata }),
-      },
-      tx,
-    );
+    // Workspace member removals have no project, and so no activity entry.
+    if (projectId)
+      await recordActivity(
+        {
+          workspaceId,
+          projectId,
+          actorId: actor.id,
+          entityType: entityType as RecoverableType,
+          entityId,
+          action: entityType + ".deleted",
+          ...(metadata === undefined ? {} : { metadata }),
+        },
+        tx,
+      );
     const record = await tx.recovery.create({
       data: {
         actorId: actor.id,
@@ -127,17 +129,18 @@ export const undo = async (actor: Actor, id: string) => {
       throw badRequest("The six-second Undo window has expired");
     await mutate(tx, current.entityType, current.entityId, null);
     await tx.recovery.delete({ where: { id } });
-    await recordActivity(
-      {
-        workspaceId: r.workspaceId,
-        ...(r.projectId ? { projectId: r.projectId } : {}),
-        actorId: actor.id,
-        entityType: r.entityType as RecoverableType,
-        entityId: r.entityId,
-        action: r.entityType + ".restored",
-      },
-      tx,
-    );
+    if (r.projectId)
+      await recordActivity(
+        {
+          workspaceId: r.workspaceId,
+          projectId: r.projectId,
+          actorId: actor.id,
+          entityType: r.entityType as RecoverableType,
+          entityId: r.entityId,
+          action: r.entityType + ".restored",
+        },
+        tx,
+      );
     return { restored: true };
   });
   announce(r.entityType, r.workspaceId, r.projectId);
@@ -153,10 +156,15 @@ export const purgeExpired = async () => {
       await tx.$queryRaw`SELECT id FROM "Workspace" WHERE id = ${r.workspaceId} FOR UPDATE`;
       const current = await tx.recovery.findUnique({ where: { id: r.id } });
       if (!current || current.expiresAt.getTime() > Date.now()) return;
-      if (r.entityType === "project")
-        await tx.project.deleteMany({
+      if (r.entityType === "project") {
+        const { count } = await tx.project.deleteMany({
           where: { id: r.entityId, deletedAt: { not: null } },
         });
+        // Activity has no foreign key to its project; nothing could read a
+        // deleted project's events, so they go with it.
+        if (count)
+          await tx.activityEvent.deleteMany({ where: { projectId: r.entityId } });
+      }
       if (r.entityType === "task")
         await tx.task.deleteMany({
           where: { id: r.entityId, deletedAt: { not: null } },

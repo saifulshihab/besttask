@@ -31,8 +31,8 @@ export const list = async (
   return paginated(await withPeople(events), total, q);
 };
 
-/** Metadata keys that hold user ids (member events, assignments, transfers). */
-const PERSON_KEYS = ["userId", "newOwnerId", "from", "to"] as const;
+/** Metadata keys that hold user ids (project member events, assignments). */
+const PERSON_KEYS = ["userId", "from", "to"] as const;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**

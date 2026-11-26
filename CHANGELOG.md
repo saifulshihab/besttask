@@ -4,6 +4,7 @@
 
 ### Before you deploy
 
+- **Take a backup first: the new migration `20261127000000_drop_workspace_activity` permanently deletes activity rows.** It removes the workspace-level events (workspace created or renamed, members added, deactivated, reactivated or removed, ownership transferred), which nothing can read since workspace Activity was removed, and the events of projects that no longer exist. Project activity is untouched. The production container applies it on start (`prisma migrate deploy`); locally run `npm run db:migrate`. To see what it will remove: `SELECT count(*) FROM "ActivityEvent" WHERE "projectId" IS NULL` plus `… WHERE NOT EXISTS (SELECT 1 FROM "Project" p WHERE p.id = "projectId")`.
 - **Run the new migrations** (`20261121130005_notifications`, `20261126160000_chat_channels`) before starting the updated API. They add the `Notification` and `Channel` tables and give every existing project a `#general` channel; nothing else changes. The production container applies them on start (`prisma migrate deploy`); locally run `npm run db:migrate`.
 - **Chat needs WebSockets to the API.** Sockets use `/socket.io` on the API's own host and port, so a proxy or host in front of the API must pass WebSocket upgrades through. Chat presence and delivery are kept in the API process's memory: run a single API instance (several would need a socket.io adapter and sticky sessions).
 
@@ -67,6 +68,8 @@
 ### Removed
 
 - The workspace Activity page (and its owner-only project and event-type filters). Each project's Activity page, the task panel history and the phone Activity tab remain.
+  - Workspace-level events are no longer recorded, and existing ones are deleted by the migration above. Every activity event now belongs to a project.
+  - When a deleted project is purged after its Undo window, its activity is deleted with it.
 - API: `GET /workspaces/:workspaceId/activity` is replaced by `GET /projects/:projectId/activity` (paginated, `entityId` for one task's events), readable by every role that can open the project. `GET /workspaces/:workspaceId/tasks` (the cross-project task list behind workspace search and My work) is removed; use `GET /projects/:projectId/tasks`.
 
 ### Fixed
