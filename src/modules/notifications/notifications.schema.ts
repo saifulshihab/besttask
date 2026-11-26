@@ -12,8 +12,14 @@ export const listNotificationsQuery = paginationSchema.extend({
     .transform((value) => value === "true"),
 });
 
+export const notificationSummaryQuery = z.object({
+  /** Count due tasks in this project only; unread stays workspace-wide. */
+  projectId: z.uuid().optional(),
+});
+
 export const markNotificationSchema = z.object({
   read: z.boolean(),
 });
 
+export type NotificationSummaryQuery = z.infer<typeof notificationSummaryQuery>;
 export type ListNotificationsQuery = z.infer<typeof listNotificationsQuery>;

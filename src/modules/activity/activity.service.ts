@@ -1,41 +1,23 @@
 import { prisma } from "../../lib/prisma.js";
-import { requireMembership, visibleProjects } from "../../lib/rbac.js";
-import { forbidden } from "../../lib/errors.js";
 import { paginated, toSkipTake } from "../../lib/pagination.js";
-import { Role } from "../../generated/prisma/enums.js";
+import { projectScope } from "../../lib/scope.js";
 import type { Actor } from "../../lib/actor.js";
 import type { Prisma } from "../../generated/prisma/client.js";
 import type { ListActivityQuery } from "./activity.schema.js";
+
+/**
+ * A project's activity, newest first (A06), or one task's events when
+ * `entityId` is given. Every role that can open the project can read it.
+ */
 export const list = async (
   actor: Actor,
-  workspaceId: string,
+  projectId: string,
   q: ListActivityQuery,
 ) => {
-  const m = await requireMembership(actor.id, workspaceId);
-  const owner = m.role === Role.WORKSPACE_OWNER;
-  // Everyone can scope the feed to one of their projects (the project
-  // Activity tab, A06) or to one task (the task panel timeline). The
-  // filtering controls on workspace activity are owner-only (A08).
-  if (!owner && (q.entityType || q.actorId || q.action || q.since))
-    throw forbidden("Activity filters are owner-only");
-  const projects = owner
-    ? []
-    : await prisma.project.findMany({
-        where: visibleProjects(actor.id, workspaceId),
-        select: { id: true },
-      });
+  await projectScope(actor.id, projectId);
   const where: Prisma.ActivityEventWhereInput = {
-    workspaceId,
-    // AND keeps the visibility restriction when a projectId is also given.
-    AND: [
-      !owner ? { projectId: { in: projects.map((p) => p.id) } } : {},
-      q.projectId ? { projectId: q.projectId } : {},
-    ],
-    ...(q.entityType ? { entityType: q.entityType } : {}),
+    projectId,
     ...(q.entityId ? { entityId: q.entityId } : {}),
-    ...(q.actorId ? { actorId: q.actorId } : {}),
-    ...(q.action ? { action: q.action } : {}),
-    ...(q.since ? { createdAt: { gte: q.since } } : {}),
   };
   const [events, total] = await Promise.all([
     prisma.activityEvent.findMany({

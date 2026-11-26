@@ -3,6 +3,7 @@ import { AppShell } from "@/components/shell/app-shell";
 import { RouteError } from "@/components/route-error";
 import { rememberWorkspace } from "@/lib/last-visited";
 import { projectsQuery, workspaceQuery, workspacesQuery } from "@/lib/queries";
+import { SelectedProjectProvider } from "@/lib/selected-project";
 
 export const Route = createFileRoute("/_app/w/$workspaceId")({
   loader: async ({ context: { queryClient }, params: { workspaceId } }) => {
@@ -14,14 +15,21 @@ export const Route = createFileRoute("/_app/w/$workspaceId")({
     ]);
     rememberWorkspace(workspaceId);
   },
-  component: () => (
-    <AppShell>
-      <Outlet />
-    </AppShell>
-  ),
+  component: WorkspaceLayout,
   errorComponent: (props) => (
     <div className="flex min-h-svh">
       <RouteError {...props} scope="workspace" />
     </div>
   ),
 });
+
+function WorkspaceLayout() {
+  const { workspaceId } = Route.useParams();
+  return (
+    <SelectedProjectProvider workspaceId={workspaceId}>
+      <AppShell>
+        <Outlet />
+      </AppShell>
+    </SelectedProjectProvider>
+  );
+}

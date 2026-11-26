@@ -1,17 +1,17 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import {
-  CircleUserRound,
   Activity,
   ChevronsUpDown,
+  CircleUserRound,
   Ellipsis,
-  Plus,
+  LayoutGrid,
   Search,
+  Settings,
   SlidersHorizontal,
   Users,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { toast, toastError } from "@/lib/toast";
 import { Avatar } from "@/components/ui/avatar";
 import {
   MenuItem,
@@ -24,27 +24,32 @@ import {
 import { cn } from "@/lib/cn";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { ROLE_LABELS } from "@/lib/design";
-import { signOut, useRestoreProject } from "@/lib/mutations";
+import { signOut } from "@/lib/mutations";
 import {
   meQuery,
   projectsQuery,
   workspaceQuery,
   workspacesQuery,
 } from "@/lib/queries";
-import type { Role } from "@/lib/types";
-import { PROJECT_TABS, type ProjectTab } from "./project-tabs";
+import { useSelectedProject } from "@/lib/selected-project";
+import type { ProjectListItem, Role } from "@/lib/types";
+import { isViewTab, PROJECT_TABS, type ProjectTab } from "./project-tabs";
 
 const navItem =
   "flex h-[34px] items-center gap-2.5 rounded-[7px] px-2.5 text-left text-base no-underline transition-colors";
 const navOn = "bg-accent-soft font-semibold text-ink hover:bg-accent-soft hover:text-ink";
 const navOff = "font-normal text-ink-2 hover:bg-hover hover:text-ink-2";
 
-/** The project tab the user is on, so switching projects keeps the same view. */
-const useCurrentTab = (): ProjectTab => {
+/** The project page the user is on, or null on a workspace page. */
+const useCurrentTab = (): ProjectTab | null => {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const last = pathname.split("/").at(-1) as ProjectTab;
-  return pathname.includes("/p/") && PROJECT_TABS.includes(last) ? last : "board";
+  return pathname.includes("/p/") && PROJECT_TABS.includes(last) ? last : null;
 };
+
+/** The owner and the project's admins manage it (S01). */
+const canManage = (isOwner: boolean, project: ProjectListItem) =>
+  isOwner || project.role !== "MEMBER";
 
 export function Sidebar({
   onCreateWorkspace,
@@ -56,32 +61,11 @@ export function Sidebar({
   onOpenSearch: () => void;
 }) {
   const { workspaceId } = useParams({ from: "/_app/w/$workspaceId" });
-  const projectId = useParams({ strict: false }).projectId;
   const { data: workspace } = useSuspenseQuery(workspaceQuery(workspaceId));
-  const { data: projects } = useSuspenseQuery(projectsQuery(workspaceId));
   const isOwner = workspace.role === "WORKSPACE_OWNER";
+  const project = useSelectedProject();
   const tab = useCurrentTab();
-  const restore = useRestoreProject(workspaceId);
-  const navigate = useNavigate();
-
-  const active = projects.filter((p) => !p.archivedAt);
-  const archived = projects.filter((p) => p.archivedAt);
-  const currentRole: Role =
-    workspace.role === "WORKSPACE_OWNER"
-      ? "WORKSPACE_OWNER"
-      : (projects.find((p) => p.id === projectId)?.role ?? "MEMBER");
-
-  const restoreProject = (id: string, name: string) =>
-    restore.mutate(id, {
-      onSuccess: () => {
-        toast(`Restored ${name}`);
-        void navigate({
-          to: "/w/$workspaceId/p/$projectId/board",
-          params: { workspaceId, projectId: id },
-        });
-      },
-      onError: (error) => toastError(error),
-    });
+  const currentRole: Role = isOwner ? "WORKSPACE_OWNER" : (project?.role ?? "MEMBER");
 
   return (
     <nav
@@ -91,10 +75,12 @@ export function Sidebar({
       <WorkspaceMenu onCreateWorkspace={onCreateWorkspace} />
 
       <div className="flex gap-2">
+        {/* Search covers the selected project only (V01, V02). */}
         <button
           type="button"
           onClick={onOpenSearch}
-          className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border border-line bg-canvas px-2.5 text-sm text-muted"
+          disabled={!project}
+          className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md border border-line bg-canvas px-2.5 text-sm text-muted disabled:opacity-60"
         >
           <Search size={15} aria-hidden />
           <span className="flex-1 truncate text-left">Search or jump to…</span>
@@ -102,107 +88,217 @@ export function Sidebar({
         <NotificationBell workspaceId={workspaceId} />
       </div>
 
-      {/* Projects and Workspace scroll here when they outgrow the window; the
-          switcher, search and account menu stay put. */}
+      {/* The project and workspace links scroll when they outgrow the window;
+          the switchers, search and account menu stay put. */}
       <div className="-mx-3 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3">
         <div className="flex flex-col gap-0.5">
-          <div className="flex items-center justify-between pr-1 pb-1 pl-2.5">
-            <span className="text-xs font-semibold text-muted">Projects</span>
-            {isOwner ? (
-              <button
-                type="button"
-                aria-label="New project"
-                onClick={onCreateProject}
-                className="flex size-7 items-center justify-center rounded-sm text-muted hover:bg-hover"
+          <ProjectMenu onCreateProject={onCreateProject} />
+          {project ? (
+            <div className="mt-1 flex flex-col gap-0.5">
+              {/* Board, List and Calendar are tabs inside Tasks. */}
+              <ProjectLink
+                project={project}
+                to="board"
+                on={tab !== null && isViewTab(tab)}
+                icon={<LayoutGrid size={16} aria-hidden />}
               >
-                <Plus size={15} aria-hidden />
-              </button>
-            ) : null}
-          </div>
-
-          {active.map((project) => (
-            <Link
-              key={project.id}
-              to={`/w/$workspaceId/p/$projectId/${tab}`}
-              params={{ workspaceId, projectId: project.id }}
-              className={cn(navItem, project.id === projectId ? navOn : navOff)}
-              aria-current={project.id === projectId ? "page" : undefined}
-            >
-              <span
-                className="flex size-[18px] shrink-0 items-center justify-center rounded-[5px] text-[9px] font-bold text-white"
-                style={{ background: project.color }}
+                Tasks
+              </ProjectLink>
+              <ProjectLink
+                project={project}
+                to="my-work"
+                on={tab === "my-work"}
+                icon={<CircleUserRound size={16} aria-hidden />}
               >
-                {project.key.slice(0, 2)}
-              </span>
-              <span className="flex-1 truncate">{project.name}</span>
-              <span className="text-xs font-medium text-muted">
-                {project._count.tasks}
-              </span>
-            </Link>
-          ))}
-
-          {active.length === 0 && isOwner ? (
+                My work
+              </ProjectLink>
+              <ProjectLink
+                project={project}
+                to="activity"
+                on={tab === "activity"}
+                icon={<Activity size={16} aria-hidden />}
+              >
+                Activity
+              </ProjectLink>
+              <ProjectLink
+                project={project}
+                to="members"
+                on={tab === "members"}
+                icon={<Users size={16} aria-hidden />}
+              >
+                Members
+              </ProjectLink>
+              {canManage(isOwner, project) ? (
+                <ProjectLink
+                  project={project}
+                  to="settings"
+                  on={tab === "settings"}
+                  icon={<Settings size={16} aria-hidden />}
+                >
+                  Settings
+                </ProjectLink>
+              ) : null}
+            </div>
+          ) : isOwner ? (
             <button
               type="button"
               onClick={onCreateProject}
-              className="h-[34px] rounded-[7px] border border-dashed border-line-strong bg-transparent px-2.5 text-left text-sm text-muted hover:bg-hover"
+              className="mt-1 h-[34px] rounded-[7px] border border-dashed border-line-strong bg-transparent px-2.5 text-left text-sm text-muted hover:bg-hover"
             >
               + Create your first project
             </button>
           ) : null}
-
-          {archived.length > 0 ? (
-            <>
-              <span className="px-2.5 pt-2 pb-0.5 text-xs text-muted">Archived</span>
-              {archived.map((project) => (
-                <div
-                  key={project.id}
-                  className="flex h-8 items-center gap-2 pr-1 pl-2.5 text-sm text-muted"
-                >
-                  <span className="flex-1 truncate">{project.name}</span>
-                  {isOwner ? (
-                    <button
-                      type="button"
-                      disabled={restore.isPending}
-                      onClick={() => restoreProject(project.id, project.name)}
-                      className="h-7 rounded-sm px-2 text-xs font-medium text-accent-hover hover:bg-hover"
-                    >
-                      Restore
-                    </button>
-                  ) : null}
-                </div>
-              ))}
-            </>
-          ) : null}
         </div>
 
-        <div className="flex flex-col gap-0.5">
-          <span className="px-2.5 pb-1 text-xs font-semibold text-muted">Workspace</span>
-          <WorkspaceLink to="/w/$workspaceId/my-work" icon={<CircleUserRound size={16} aria-hidden />}>
-            My work
-          </WorkspaceLink>
-          <WorkspaceLink to="/w/$workspaceId/activity" icon={<Activity size={16} aria-hidden />}>
-            Activity
-          </WorkspaceLink>
-          {/* The workspace directory and settings are owner-only (U01, W03). */}
-          {isOwner ? (
+        {/* The workspace directory and settings are owner-only (U01, W03). */}
+        {isOwner ? (
+          <div className="flex flex-col gap-0.5">
+            <span className="px-2.5 pb-1 text-xs font-semibold text-muted">Workspace</span>
             <WorkspaceLink to="/w/$workspaceId/members" icon={<Users size={16} aria-hidden />}>
               Members
             </WorkspaceLink>
-          ) : null}
-          {isOwner ? (
             <WorkspaceLink
               to="/w/$workspaceId/settings"
               icon={<SlidersHorizontal size={16} aria-hidden />}
             >
               Settings
             </WorkspaceLink>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </div>
 
       <AccountMenu roleLabel={ROLE_LABELS[currentRole]} />
     </nav>
+  );
+}
+
+function ProjectLink({
+  project,
+  to,
+  on,
+  icon,
+  children,
+}: {
+  project: ProjectListItem;
+  to: ProjectTab;
+  on: boolean;
+  icon: ReactNode;
+  children: ReactNode;
+}) {
+  const { workspaceId } = useParams({ from: "/_app/w/$workspaceId" });
+  return (
+    <Link
+      to={`/w/$workspaceId/p/$projectId/${to}`}
+      params={{ workspaceId, projectId: project.id }}
+      className={cn(navItem, on ? navOn : navOff)}
+      aria-current={on ? "page" : undefined}
+    >
+      {icon}
+      <span className="flex-1">{children}</span>
+    </Link>
+  );
+}
+
+/**
+ * Switches the selected project and stays on the same page of it (Tasks, My
+ * work, Members…). Archived projects are listed apart and can't be opened;
+ * the owner restores them in workspace settings (S13). Creating a project is
+ * owner-only (P01).
+ */
+function ProjectMenu({ onCreateProject }: { onCreateProject: () => void }) {
+  const { workspaceId } = useParams({ from: "/_app/w/$workspaceId" });
+  const { data: workspace } = useSuspenseQuery(workspaceQuery(workspaceId));
+  const { data: projects } = useSuspenseQuery(projectsQuery(workspaceId));
+  const selected = useSelectedProject();
+  const tab = useCurrentTab();
+  const navigate = useNavigate();
+  const isOwner = workspace.role === "WORKSPACE_OWNER";
+
+  if (projects.length === 0) return null;
+  const active = projects.filter((p) => !p.archivedAt);
+  const archived = projects.filter((p) => p.archivedAt);
+
+  const open = (project: ProjectListItem) => {
+    // Settings are for owners and admins; a member lands on the board instead.
+    const to = !tab || (tab === "settings" && !canManage(isOwner, project)) ? "board" : tab;
+    void navigate({
+      to: `/w/$workspaceId/p/$projectId/${to}`,
+      params: { workspaceId, projectId: project.id },
+    });
+  };
+
+  return (
+    <MenuRoot>
+      <MenuTrigger className="flex min-h-11 w-full items-center gap-2.5 rounded-md border-0 bg-transparent px-2 py-1.5 text-left hover:bg-hover data-[popup-open]:bg-hover">
+        {/* The name read out starts with the action, then the visible text. */}
+        <span className="sr-only">Switch project: </span>
+        {selected ? (
+          <>
+            <span
+              aria-hidden
+              className="flex size-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
+              style={{ background: selected.color }}
+            >
+              {selected.key.slice(0, 2)}
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-base font-semibold text-ink">{selected.name}</span>
+              <span className="text-xs text-muted">
+                {selected.archivedAt
+                  ? "Archived"
+                  : `${selected._count.tasks} open task${selected._count.tasks === 1 ? "" : "s"}`}
+              </span>
+            </span>
+          </>
+        ) : (
+          <span className="flex-1 text-sm text-muted">Choose a project</span>
+        )}
+        <ChevronsUpDown size={16} className="text-muted" aria-hidden />
+      </MenuTrigger>
+      <MenuPopup matchTrigger>
+        <MenuLabel>Projects</MenuLabel>
+        {active.map((p) => (
+          <MenuItem key={p.id} onClick={() => open(p)}>
+            <span
+              aria-hidden
+              className="inline-block size-2.5 shrink-0 rounded-[3px]"
+              style={{ background: p.color }}
+            />
+            <span className="flex-1 truncate">{p.name}</span>
+            {p.id === selected?.id ? (
+              <span className="text-xs text-muted">current</span>
+            ) : (
+              <span className="text-xs text-muted">{p._count.tasks}</span>
+            )}
+          </MenuItem>
+        ))}
+        {active.length === 0 ? (
+          <span className="px-2.5 py-1.5 text-sm text-muted">No active projects</span>
+        ) : null}
+        {archived.length > 0 ? (
+          <>
+            <MenuSeparator />
+            <MenuLabel>Archived</MenuLabel>
+            {archived.map((p) => (
+              <MenuItem key={p.id} disabled className="text-faint data-[disabled]:cursor-default">
+                <span
+                  aria-hidden
+                  className="inline-block size-2.5 shrink-0 rounded-[3px] opacity-50"
+                  style={{ background: p.color }}
+                />
+                <span className="flex-1 truncate">{p.name}</span>
+              </MenuItem>
+            ))}
+          </>
+        ) : null}
+        {isOwner ? (
+          <>
+            <MenuSeparator />
+            <MenuItem onClick={onCreateProject}>+ New project</MenuItem>
+          </>
+        ) : null}
+      </MenuPopup>
+    </MenuRoot>
   );
 }
 
@@ -211,7 +307,7 @@ function WorkspaceLink({
   icon,
   children,
 }: {
-  to: "/w/$workspaceId/my-work" | "/w/$workspaceId/activity" | "/w/$workspaceId/members" | "/w/$workspaceId/settings";
+  to: "/w/$workspaceId/members" | "/w/$workspaceId/settings";
   icon: ReactNode;
   children: ReactNode;
 }) {
@@ -247,7 +343,7 @@ function WorkspaceMenu({ onCreateWorkspace }: { onCreateWorkspace: () => void })
       >
         {/* The name read out starts with the action, then the visible text. */}
         <span className="sr-only">Switch workspace: </span>
-        <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-[7px] bg-accent text-sm font-bold text-white">
+        <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-base font-bold text-white">
           {workspace.name.slice(0, 1).toUpperCase()}
         </span>
         <span className="flex min-w-0 flex-1 flex-col">

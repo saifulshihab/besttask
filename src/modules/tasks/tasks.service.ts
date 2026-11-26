@@ -2,7 +2,6 @@ import { recordActivity } from "../../lib/activity.js";
 import { badRequest, conflict, notFound } from "../../lib/errors.js";
 import { paginated, toSkipTake } from "../../lib/pagination.js";
 import { prisma } from "../../lib/prisma.js";
-import { requireMembership, visibleProjects } from "../../lib/rbac.js";
 import { projectScope, taskScope } from "../../lib/scope.js";
 import type { Actor } from "../../lib/actor.js";
 import type { Prisma } from "../../generated/prisma/client.js";
@@ -257,19 +256,6 @@ export const listForProject = async (
     runList(actor, { projectId }, query),
   ]);
   return list;
-};
-
-export const listForWorkspace = async (
-  actor: Actor,
-  workspaceId: string,
-  query: ListTasksQuery,
-) => {
-  await requireMembership(actor.id, workspaceId);
-  return runList(
-    actor,
-    { project: visibleProjects(actor.id, workspaceId) },
-    query,
-  );
 };
 
 export const get = async (actor: Actor, taskId: string) => {

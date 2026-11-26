@@ -1,12 +1,10 @@
 import { Popover } from "@base-ui/react/popover";
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Bell } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { useMarkAllRead } from "@/lib/notification-mutations";
-import { notificationSummaryQuery } from "@/lib/queries";
-import { DueBanner, NotificationList } from "./notification-list";
+import { DueBanner, NotificationList, useNotificationSummary } from "./notification-list";
 
 /** "9+" past nine, so the badge stays one small circle. */
 export const badgeText = (n: number) => (n > 9 ? "9+" : String(n));
@@ -21,7 +19,7 @@ export function NotificationTools({
   unreadOnly: boolean;
   onUnreadOnly: (value: boolean) => void;
 }) {
-  const { data } = useQuery(notificationSummaryQuery(workspaceId));
+  const { data } = useNotificationSummary(workspaceId);
   const markAll = useMarkAllRead(workspaceId);
   const tab = (value: boolean, label: string) => (
     <button
@@ -58,7 +56,7 @@ export function NotificationTools({
 
 /** The sidebar's bell: unread badge, and the latest notifications in a popover. */
 export function NotificationBell({ workspaceId }: { workspaceId: string }) {
-  const { data } = useQuery(notificationSummaryQuery(workspaceId));
+  const { data } = useNotificationSummary(workspaceId);
   const [open, setOpen] = useState(false);
   const [unreadOnly, setUnreadOnly] = useState(false);
   const unread = data?.unread ?? 0;

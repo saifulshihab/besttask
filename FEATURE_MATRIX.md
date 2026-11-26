@@ -90,7 +90,7 @@ This document is the source of truth for who can do what in BestTask. The API en
 | S10 | Configure In progress work-in-progress limit | ✅ | ✅ | ❌ | A warning only; not a hard movement limit. |
 | S11 | Configure visible card fields | ✅ | ✅ | ❌ | Assignee, due date, labels, subtask progress, comment count. |
 | S12 | Archive project | ✅ | ❌ | ❌ | Only the workspace owner may archive a project. |
-| S13 | Restore archived project | ✅ | ❌ | ❌ | Only the workspace owner may restore an archived project. |
+| S13 | Restore archived project | ✅ | ❌ | ❌ | Only the workspace owner may restore an archived project, from the Archived projects section of workspace settings. Archived projects are shown disabled in the project switcher. |
 | S14 | Delete project and its tasks | ✅ | ❌ | ❌ | Only the workspace owner may delete a project; prototype requires typing its key. |
 | S15 | Edit tasks inside an archived project | ❌ | ❌ | ❌ | Not available to anyone while archived. Owner must restore the project before tasks can be edited. |
 
@@ -154,9 +154,9 @@ All allowed task actions below apply to accessible, active projects. Admins/memb
 | A03 | Edit own comment | ✅ | ✅ | ✅ | Own comments only, within accessible, active projects. |
 | A04 | Delete own comment | ✅ | ✅ | ✅ | Own comments only, within accessible, active projects. |
 | A05 | Edit or delete someone else's comment | ❌ | ❌ | ❌ | Not allowed for any role, including the workspace owner. |
-| A06 | View project activity | ✅ | ✅ | ✅ | Only accessible projects. |
-| A07 | View workspace activity | ✅ | ✅ | ✅ | Owner sees workspace-wide activity. Admins/members see only activity from their assigned projects. |
-| A08 | Filter activity by project and event type | ✅ | ❌ | ❌ | Only the workspace owner has these activity filtering controls. Task list filters under V03 remain available to all roles. |
+| A06 | View project activity | ✅ | ✅ | ✅ | Only accessible projects. Opened from the project links in the sidebar. |
+| A07 | View workspace activity | ❌ | ❌ | ❌ | Removed. Activity is read per project under A06. |
+| A08 | Filter activity by project and event type | ❌ | ❌ | ❌ | Removed with workspace activity (A07). The project feed is scoped to its project and has no filters; task list filters under V03 remain available to all roles. |
 | A09 | Open a task from an activity entry | ✅ | ✅ | ✅ | Subject to current task access and existence. |
 | A10 | Manually edit or delete audit/activity records | ❌ | ❌ | ❌ | Not allowed for any role. |
 
@@ -165,7 +165,7 @@ All allowed task actions below apply to accessible, active projects. Admins/memb
 | ID | Feature | WORKSPACE_OWNER | ADMIN | MEMBER | Notes / review decision |
 | --- | --- | :---: | :---: | :---: | --- |
 | V01 | Search tasks in the active project | ✅ | ✅ | ✅ | Matches title, description, and task key. |
-| V02 | Use global search / jump to tasks, projects, and pages | ✅ | ✅ | ✅ | Results and navigation actions must respect permissions. |
+| V02 | Use search / jump to tasks and pages of the selected project | ✅ | ✅ | ✅ | Covers only the project selected in the sidebar: its tasks (as V01) and its pages, with Settings only for those allowed under S01. Other projects are reached through the project switcher. |
 | V03 | Filter by status, priority, assignee, and labels | ✅ | ✅ | ✅ | Includes assigned-to-me and unassigned. |
 | V04 | Sort by priority, newest, due date, or title | ✅ | ✅ | ✅ | Applies to board/list presentation. |
 | V05 | Save a named filtered view | ✅ | ✅ | ✅ | Personal views only, persisted per user and project. |
@@ -177,7 +177,7 @@ All allowed task actions below apply to accessible, active projects. Admins/memb
 | V11 | Navigate paginated task list | ✅ | ✅ | ✅ | Prototype includes Previous, Next, and page selection. |
 | V12 | Use keyboard shortcuts and Escape to close overlays | ✅ | ✅ | ✅ | Shortcuts must not bypass action permissions. |
 | V13 | View project tasks on a calendar by due date and reschedule by dragging | ✅ | ✅ | ✅ | Accessible, non-archived projects only. Rescheduling follows the task edit rules. |
-| V14 | View My work: own assigned tasks across the workspace | ✅ | ✅ | ✅ | Only tasks in projects the actor can access; archived projects are left out. Marking done follows the task edit rules. |
+| V14 | View My work: own assigned tasks in the selected project | ✅ | ✅ | ✅ | A project page; only accessible projects. In an archived project the tasks are listed read-only (S15). Marking done follows the task edit rules. |
 
 ## Profile, account, and notifications
 
@@ -197,7 +197,7 @@ All allowed task actions below apply to accessible, active projects. Admins/memb
 | C12 | Delete own account | ✅ | ✅ | ✅ | Transfer ownership or delete all owned workspaces first. Preserve surviving authored comments/history through an appropriate deleted-author representation. |
 | C13 | Receive in-app notifications about own tasks | ✅ | ✅ | ✅ | Assignment to the actor; comments on tasks the actor created, is assigned to, or commented on; status changes on tasks the actor created or is assigned to. Never for the actor's own actions. Only for projects the actor can currently access, checked on every read. In-app only: no email (R12). |
 | C14 | Mark own notifications read or unread, one or all | ✅ | ✅ | ✅ | Own notifications only; another user's notification answers 404. |
-| C15 | See counts of own overdue and due-today tasks | ✅ | ✅ | ✅ | Computed on request in the actor's timezone; not stored as notifications. Links to My work (V14). |
+| C15 | See counts of own overdue and due-today tasks | ✅ | ✅ | ✅ | Counted in the selected project, computed on request in the actor's timezone; not stored as notifications. Links to that project's My work (V14). The unread count stays workspace-wide. |
 
 ## Mobile and recovery
 

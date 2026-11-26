@@ -41,25 +41,19 @@ export const keys = {
   task: (id: string) => ["task", id] as const,
   taskComments: (id: string) => ["task", id, "comments"] as const,
   taskActivity: (id: string) => ["task", id, "activity"] as const,
-  activity: (workspaceId: string, filters: ActivityFilters = {}) =>
-    ["workspace", workspaceId, "activity", filters] as const,
+  projectActivity: (id: string) => ["project", id, "activity"] as const,
   workspaceMembers: (id: string) => ["workspace", id, "members"] as const,
   workspaceStats: (id: string) => ["workspace", id, "stats"] as const,
   notifications: (workspaceId: string, unreadOnly = false) =>
     ["workspace", workspaceId, "notifications", { unreadOnly }] as const,
   /** Prefix covering both notification lists and the summary. */
   allNotifications: (workspaceId: string) => ["workspace", workspaceId, "notifications"] as const,
-  notificationSummary: (workspaceId: string) =>
+  /** Prefix covering the summary for every project. */
+  allNotificationSummaries: (workspaceId: string) =>
     ["workspace", workspaceId, "notifications", "summary"] as const,
-  /** Tasks assigned to the signed-in user across a workspace (My work). */
-  myTasks: (workspaceId: string) => ["my-tasks", workspaceId] as const,
-  /** Prefix covering every workspace's My work list. */
-  allMyTasks: ["my-tasks"] as const,
+  notificationSummary: (workspaceId: string, projectId: string | null) =>
+    ["workspace", workspaceId, "notifications", "summary", projectId] as const,
 };
-
-export interface ActivityFilters {
-  projectId?: string;
-}
 
 export const meQuery = queryOptions({
   queryKey: keys.me,
@@ -146,11 +140,11 @@ export const taskCommentsQuery = (id: string) =>
  * The task's own events, newest first, 20 per page (comments come from
  * taskCommentsQuery). The panel timeline asks for more pages as needed.
  */
-export const taskActivityQuery = (workspaceId: string, taskId: string) =>
+export const taskActivityQuery = (projectId: string, taskId: string) =>
   infiniteQueryOptions({
     queryKey: keys.taskActivity(taskId),
     queryFn: ({ pageParam, signal }) =>
-      api<Paginated<ActivityEvent>>(`/workspaces/${workspaceId}/activity`, {
+      api<Paginated<ActivityEvent>>(`/projects/${projectId}/activity`, {
         query: { entityId: taskId, page: pageParam, pageSize: 20 },
         signal,
       }),
@@ -162,15 +156,15 @@ export const taskActivityQuery = (workspaceId: string, taskId: string) =>
 export const ACTIVITY_PAGE_SIZE = 20;
 
 /**
- * Activity, newest first, a page at a time (infinite query). The feed fetches
- * more pages as the reader asks for them; see useActivityFeed.
+ * A project's activity, newest first, a page at a time (infinite query). The
+ * feed fetches more pages as the reader asks for them; see useActivityFeed.
  */
-export const activityQuery = (workspaceId: string, filters: ActivityFilters = {}) =>
+export const activityQuery = (projectId: string) =>
   infiniteQueryOptions({
-    queryKey: keys.activity(workspaceId, filters),
+    queryKey: keys.projectActivity(projectId),
     queryFn: ({ pageParam, signal }) =>
-      api<Paginated<ActivityEvent>>(`/workspaces/${workspaceId}/activity`, {
-        query: { ...filters, page: pageParam, pageSize: ACTIVITY_PAGE_SIZE },
+      api<Paginated<ActivityEvent>>(`/projects/${projectId}/activity`, {
+        query: { page: pageParam, pageSize: ACTIVITY_PAGE_SIZE },
         signal,
       }),
     initialPageParam: 1,
@@ -193,20 +187,6 @@ export const workspaceStatsQuery = (id: string) =>
       api<WorkspaceStats>(`/workspaces/${id}/stats`, { signal }),
   });
 
-/**
- * Tasks assigned to the signed-in user in every project they can see in the
- * workspace, subtasks included (they are assigned on their own).
- */
-export const myTasksQuery = (workspaceId: string) =>
-  queryOptions({
-    queryKey: keys.myTasks(workspaceId),
-    queryFn: ({ signal }) =>
-      apiAll<Task>(`/workspaces/${workspaceId}/tasks`, { assigneeId: "me", sort: "dueDate" }, signal),
-    // Board drags and other pages change these tasks without touching this
-    // list, so it refetches (behind the cached copy) whenever it is opened.
-    staleTime: 0,
-  });
-
 export const NOTIFICATION_PAGE_SIZE = 20;
 
 /** The signed-in user's notifications, newest first, a page at a time. */
@@ -224,14 +204,18 @@ export const notificationsQuery = (workspaceId: string, unreadOnly = false) =>
   });
 
 /**
- * Unread count and due-task counts for the bell. There is no push channel
- * yet, so it polls once a minute (and refetches when the window regains focus).
+ * Unread count (workspace-wide) and due-task counts (for the selected
+ * project, matching its My work) for the bell. There is no push channel yet,
+ * so it polls once a minute (and refetches when the window regains focus).
  */
-export const notificationSummaryQuery = (workspaceId: string) =>
+export const notificationSummaryQuery = (workspaceId: string, projectId: string | null) =>
   queryOptions({
-    queryKey: keys.notificationSummary(workspaceId),
+    queryKey: keys.notificationSummary(workspaceId, projectId),
     queryFn: ({ signal }) =>
-      api<NotificationSummary>(`/workspaces/${workspaceId}/notifications/summary`, { signal }),
+      api<NotificationSummary>(`/workspaces/${workspaceId}/notifications/summary`, {
+        query: { projectId: projectId ?? undefined },
+        signal,
+      }),
     staleTime: 15_000,
     refetchInterval: 60_000,
   });

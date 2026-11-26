@@ -520,7 +520,7 @@ function DangerSection({
         <div className="flex flex-wrap items-center gap-3 border-b border-line-soft pb-3.5">
           <span className="flex min-w-[240px] flex-1 flex-col gap-0.5">
             <span className="text-base font-medium">Archive project</span>
-            <span className="text-xs text-muted">Hides it from the sidebar. Restore any time from Archived.</span>
+            <span className="text-xs text-muted">Hides it from the project switcher. Restore it any time from workspace settings.</span>
           </span>
           <Button
             disabled={archive.isPending}

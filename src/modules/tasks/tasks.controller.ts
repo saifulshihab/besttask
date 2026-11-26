@@ -1,7 +1,6 @@
 import { actorOf } from "../../lib/actor.js";
 import { route } from "../../lib/http.js";
 import { projectIdParams } from "../projects/projects.schema.js";
-import { workspaceIdParams } from "../workspaces/workspaces.schema.js";
 import {
   attachLabelSchema,
   createTaskSchema,
@@ -27,12 +26,6 @@ export const tasksController = {
     { params: projectIdParams, query: listTasksQuery },
     ({ params, query, req }) =>
       taskService.listForProject(actorOf(req), params.projectId, query),
-  ),
-
-  listForWorkspace: route(
-    { params: workspaceIdParams, query: listTasksQuery },
-    ({ params, query, req }) =>
-      taskService.listForWorkspace(actorOf(req), params.workspaceId, query),
   ),
 
   get: route({ params: taskIdParams }, ({ params, req }) =>

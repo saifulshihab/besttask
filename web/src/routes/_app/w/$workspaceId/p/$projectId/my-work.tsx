@@ -1,70 +1,63 @@
-import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Ban, Check, CircleCheck, Search } from "lucide-react";
 import { useMemo } from "react";
 import { z } from "zod";
-import { Page, PageHeader } from "@/components/page";
+import { Page } from "@/components/page";
 import { PriorityChip, StatusDot } from "@/components/tasks/task-badges";
-import { TaskPanel } from "@/components/tasks/task-panel";
-import { MenuItem, MenuPopup, MenuRoot, MenuTrigger } from "@/components/ui/menu";
 import { cn } from "@/lib/cn";
 import { PRIORITIES, STATUSES } from "@/lib/design";
 import { dueLabel, groupTasks, isFinished, type GroupId } from "@/lib/my-work";
-import { keys, myTasksQuery, projectQuery, projectsQuery, taskQuery, workspaceQuery } from "@/lib/queries";
+import { meQuery, projectQuery, projectTasksQuery } from "@/lib/queries";
 import { todayString } from "@/lib/task-filters";
 import { useUpdateTask } from "@/lib/task-mutations";
-import type { ProjectListItem, Task } from "@/lib/types";
+import type { Task } from "@/lib/types";
 
 const searchSchema = z.object({
   q: z.string().optional().catch(undefined),
-  project: z.string().optional().catch(undefined),
   /** Also show done and cancelled tasks. */
   done: z.boolean().optional().catch(undefined),
-  /** The task open in the detail panel. */
+  /** The task open in the detail panel (the project layout renders it). */
   task: z.string().optional().catch(undefined),
 });
 
-export const Route = createFileRoute("/_app/w/$workspaceId/my-work")({
+/**
+ * My work (V14): the signed-in user's tasks in this project, subtasks
+ * included, grouped by due date. It reads the project's task list, so board
+ * and panel edits show here at once.
+ */
+export const Route = createFileRoute("/_app/w/$workspaceId/p/$projectId/my-work")({
   validateSearch: searchSchema,
-  loader: ({ context: { queryClient }, params: { workspaceId } }) =>
+  loader: ({ context: { queryClient }, params: { projectId } }) =>
     Promise.all([
-      queryClient.ensureQueryData(myTasksQuery(workspaceId)),
-      queryClient.ensureQueryData(projectsQuery(workspaceId)),
+      queryClient.ensureQueryData(projectTasksQuery(projectId)),
+      queryClient.ensureQueryData(meQuery),
     ]),
   component: MyWork,
 });
 
 function MyWork() {
-  const { workspaceId } = Route.useParams();
+  const { workspaceId, projectId } = Route.useParams();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
-  const queryClient = useQueryClient();
-  const { data: workspace } = useSuspenseQuery(workspaceQuery(workspaceId));
-  const { data: tasks } = useSuspenseQuery(myTasksQuery(workspaceId));
-  const { data: projects } = useSuspenseQuery(projectsQuery(workspaceId));
+  const { data: project } = useSuspenseQuery(projectQuery(projectId));
+  const { data: all } = useSuspenseQuery(projectTasksQuery(projectId));
+  const { data: me } = useSuspenseQuery(meQuery);
   const today = todayString();
+  const editable = !project.archivedAt;
 
-  const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
-  // Archived projects are read-only and out of the way; so is their work.
-  const live = useMemo(
-    () => tasks.filter((t) => { const p = projectById.get(t.projectId); return p && !p.archivedAt; }),
-    [tasks, projectById],
-  );
-  const open = live.filter((t) => !isFinished(t));
-  // Only projects that hold some of the user's tasks are worth filtering by.
-  const myProjects = projects.filter((p) => live.some((t) => t.projectId === p.id));
-  const project = projectById.get(search.project ?? "");
+  const mine = useMemo(() => all.filter((t) => t.assigneeId === me.id), [all, me.id]);
+  const open = mine.filter((t) => !isFinished(t));
 
   const groups = useMemo(() => {
     const q = search.q?.trim().toLowerCase();
-    const shown = live.filter(
+    const shown = mine.filter(
       (t) =>
         (search.done || !isFinished(t)) &&
-        (!search.project || t.projectId === search.project) &&
         (!q || `${t.key} ${t.title}`.toLowerCase().includes(q)),
     );
     return groupTasks(shown, today);
-  }, [live, search.done, search.project, search.q, today]);
+  }, [mine, search.done, search.q, today]);
 
   const update = (patch: Partial<z.infer<typeof searchSchema>>) =>
     void navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true });
@@ -72,13 +65,13 @@ function MyWork() {
   const overdue = open.filter((t) => t.dueDate && t.dueDate.slice(0, 10) < today).length;
   const summary =
     open.length === 0
-      ? `Nothing open is assigned to you in ${workspace.name}.`
+      ? `Nothing open is assigned to you in ${project.name}.`
       : `${open.length} open task${open.length === 1 ? "" : "s"} assigned to you` +
         (overdue ? `, ${overdue} overdue.` : ".");
 
   return (
     <Page>
-      <PageHeader title="My work" description={summary} />
+      <p className="m-0 text-sm text-muted">{summary}</p>
       <div className="flex flex-wrap items-center gap-2">
         <label className="flex h-[34px] min-w-[200px] flex-[1_1_220px] items-center gap-2 rounded-md border border-line bg-canvas px-2.5 text-muted focus-within:border-accent">
           <Search size={14} aria-hidden />
@@ -91,22 +84,6 @@ function MyWork() {
             className="min-w-0 flex-1 border-0 bg-transparent text-sm text-ink outline-none placeholder:text-muted"
           />
         </label>
-        <MenuRoot>
-          <MenuTrigger className="h-[34px] rounded-md border border-line-strong bg-canvas px-2.5 text-sm text-ink hover:bg-hover">
-            {project?.name ?? "All projects"}
-          </MenuTrigger>
-          <MenuPopup className="min-w-[200px]">
-            {[{ id: undefined, name: "All projects" }, ...myProjects].map((p) => (
-              <MenuItem
-                key={p.id ?? "all"}
-                onClick={() => update({ project: p.id })}
-                className={p.id === search.project ? "font-semibold text-accent-hover" : undefined}
-              >
-                {p.name}
-              </MenuItem>
-            ))}
-          </MenuPopup>
-        </MenuRoot>
         <button
           type="button"
           aria-pressed={!!search.done}
@@ -132,14 +109,14 @@ function MyWork() {
       {groups.length === 0 ? (
         <div className="rounded-xl border border-dashed border-line-strong px-6 py-10 text-center">
           <p className="m-0 text-base font-semibold">
-            {live.length === 0 ? "Nothing is assigned to you yet" : "No tasks match"}
+            {mine.length === 0 ? "Nothing is assigned to you yet" : "No tasks match"}
           </p>
           <p className="m-0 mt-1 text-sm text-muted">
-            {live.length === 0
-              ? "Tasks assigned to you in any project show up here."
+            {mine.length === 0
+              ? `Tasks assigned to you in ${project.name} show up here.`
               : search.done
-                ? "Try another project or search."
-                : "Try another project or search, or show completed tasks."}
+                ? "Try another search."
+                : "Try another search, or show completed tasks."}
           </p>
         </div>
       ) : null}
@@ -160,9 +137,9 @@ function MyWork() {
                 workspaceId={workspaceId}
                 task={task}
                 group={group.id}
-                project={projectById.get(task.projectId)!}
-                parent={task.parentTaskId ? tasks.find((t) => t.id === task.parentTaskId) : undefined}
+                parent={task.parentTaskId ? all.find((t) => t.id === task.parentTaskId) : undefined}
                 today={today}
+                editable={editable}
                 selected={task.id === search.task}
                 onOpen={() => update({ task: task.id })}
               />
@@ -170,20 +147,6 @@ function MyWork() {
           </ul>
         </section>
       ))}
-
-      {search.task ? (
-        <MyTaskPanel
-          workspaceId={workspaceId}
-          taskId={search.task}
-          tasks={tasks}
-          onClose={() => {
-            update({ task: undefined });
-            // The panel can change things this list does not mirror (subtasks,
-            // reassignment); reload it behind the cached copy.
-            void queryClient.invalidateQueries({ queryKey: keys.myTasks(workspaceId) });
-          }}
-        />
-      ) : null}
     </Page>
   );
 }
@@ -192,18 +155,19 @@ function MyTaskRow({
   workspaceId,
   task,
   group,
-  project,
   parent,
   today,
+  editable,
   selected,
   onOpen,
 }: {
   workspaceId: string;
   task: Task;
   group: GroupId;
-  project: ProjectListItem;
   parent?: Task;
   today: string;
+  /** Archived projects are read-only (S15). */
+  editable: boolean;
   selected: boolean;
   onOpen: () => void;
 }) {
@@ -227,10 +191,10 @@ function MyTaskRow({
           role="checkbox"
           aria-checked={done}
           aria-label={done ? `Reopen ${task.key}` : `Mark ${task.key} done`}
-          disabled={save.isPending}
+          disabled={save.isPending || !editable}
           // Reopening puts it back to To do; the panel offers every status.
           onClick={() => save.mutate({ id: task.id, patch: { status: done ? "TODO" : "DONE" } })}
-          className="flex size-[18px] shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-muted hover:text-success"
+          className="flex size-[18px] shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-muted hover:text-success disabled:hover:text-muted"
         >
           {done ? (
             <CircleCheck size={18} className="text-success" aria-hidden />
@@ -248,16 +212,9 @@ function MyTaskRow({
         <span className={cn("max-w-full truncate text-sm font-medium", done || cancelled ? "text-muted" : "text-ink")}>
           {task.title}
         </span>
-        <span className="flex max-w-full items-center gap-1.5 truncate text-xs text-muted">
-          <span
-            aria-hidden
-            className="inline-block size-2 shrink-0 rounded-[3px]"
-            style={{ background: project.color }}
-          />
-          <span className="truncate">
-            {project.name} · {task.key}
-            {parent ? ` · Subtask of ${parent.title}` : task.parentTaskId ? " · Subtask" : ""}
-          </span>
+        <span className="max-w-full truncate text-xs text-muted">
+          {task.key}
+          {parent ? ` · Subtask of ${parent.title}` : task.parentTaskId ? " · Subtask" : ""}
         </span>
       </button>
 
@@ -279,25 +236,4 @@ function MyTaskRow({
       </span>
     </li>
   );
-}
-
-/** The task panel for a task from any project: loads that project first. */
-function MyTaskPanel({
-  workspaceId,
-  taskId,
-  tasks,
-  onClose,
-}: {
-  workspaceId: string;
-  taskId: string;
-  tasks: Task[];
-  onClose: () => void;
-}) {
-  const listed = tasks.find((t) => t.id === taskId);
-  // A link can name a task that is not (or no longer) assigned to the user.
-  const single = useQuery({ ...taskQuery(taskId), enabled: !listed });
-  const projectId = listed?.projectId ?? single.data?.projectId;
-  const project = useQuery({ ...projectQuery(projectId ?? ""), enabled: !!projectId });
-  if (!project.data) return null;
-  return <TaskPanel workspaceId={workspaceId} project={project.data} taskId={taskId} onClose={onClose} />;
 }

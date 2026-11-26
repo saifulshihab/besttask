@@ -14,15 +14,15 @@
   - You're notified when someone assigns you a task, comments on a task you created, are assigned to or have commented on, or moves a task you created or are assigned to into another status. Never for your own actions.
   - A bell next to search in the sidebar shows the unread count (refreshed every minute and when you come back to the tab) and opens the latest notifications. Open all notifications, or the bell in the phone header, goes to a full Notifications page (also in ⌘K).
   - All / Unread, mark one read or unread, Mark all read, and Load more. Clicking a notification marks it read and opens the task.
-  - A banner shows how many of your tasks are overdue or due today (in your profile's timezone), linking to My work. These are counted on request, not stored, so they never pile up.
+  - A banner shows how many of your tasks in the selected project are overdue or due today (in your profile's timezone), linking to that project's My work. These are counted on request, not stored, so they never pile up.
   - Notifications are checked against your access every time they're read: if you're removed from a project, its notifications disappear, and they return if you're added back. Deleting your account deletes your notifications.
-  - API: `GET /workspaces/:workspaceId/notifications` (`unread=true` to filter), `GET /workspaces/:workspaceId/notifications/summary` (`{ unread, overdue, dueToday }`), `POST /workspaces/:workspaceId/notifications/read-all`, `PATCH /notifications/:notificationId` with `{ read }`.
-- My work: a workspace page (in the sidebar, ⌘K and the phone menu) listing every task assigned to you across the projects you can open.
-  - Grouped into Overdue, Today, Next 7 days, Later and No due date, soonest and most urgent first. Each row shows its project, status, priority and due date.
-  - Tick the circle to mark a task done (or untick to reopen it to To do); click a row to open the task panel.
-  - Filter by project or by title and ID, and "Show completed" adds a Completed group. Filters are kept in the URL.
-  - Subtasks assigned to you are included and name their parent. Tasks in archived projects are left out.
-  - Uses the existing `GET /workspaces/:workspaceId/tasks?assigneeId=me`; there are no API changes.
+  - API: `GET /workspaces/:workspaceId/notifications` (`unread=true` to filter), `GET /workspaces/:workspaceId/notifications/summary` (`{ unread, overdue, dueToday }`; `projectId` limits the due counts to one project, unread stays workspace-wide), `POST /workspaces/:workspaceId/notifications/read-all`, `PATCH /notifications/:notificationId` with `{ read }`.
+- My work: a project page (in the sidebar's project links, ⌘K and the phone menu) listing the tasks assigned to you in that project.
+  - Grouped into Overdue, Today, Next 7 days, Later and No due date, soonest and most urgent first. Each row shows its status, priority and due date.
+  - Tick the circle to mark a task done (or untick to reopen it to To do); click a row to open the task panel. In an archived project the list is read-only.
+  - Filter by title and ID, and "Show completed" adds a Completed group. Filters are kept in the URL.
+  - Subtasks assigned to you are included and name their parent.
+  - Built from the project's task list, so board and panel edits show at once; there are no API changes.
 - Calendar view: a third project tab next to Board and List that shows tasks by due date, month by month (weeks start on Monday).
   - Drag a task to another day to reschedule it, or onto "No due date" to clear its date. The "No due date" panel lists open tasks without a date; drag one onto a day to schedule it.
   - The + on a day adds a task due that day, with the project's default status and priority.
@@ -32,6 +32,13 @@
   - Like the board, the calendar shows top-level tasks only. It uses the existing task APIs; there are no API changes.
 
 ### Changed
+
+- Projects are chosen with a project switcher in the sidebar, below the workspace switcher, in place of the project list. It keeps you on the same page when you switch, shows archived projects disabled and has "+ New project" for the owner.
+  - Archived projects are restored from a new Archived projects section in workspace settings (owner only).
+  - Under it, the selected project's links: Tasks (the Board, List and Calendar tabs, which stay in the project header), My work, Activity, Members and, for the owner and project admins, Settings. Activity, Members and Settings are no longer header tabs, and the header's settings button is gone.
+  - The selection stays when you open a workspace page (Members, Settings, Notifications, Profile), and is remembered per workspace across reloads. If that project is archived, gone or no longer yours, the first active project is selected.
+  - The Workspace section keeps Members and Settings for the owner, and is hidden for everyone else.
+- Search (⌘K) covers only the selected project: its tasks by title, description and ID, and its pages. Use the project switcher to reach other projects.
 
 - Renamed from TaskFlow to BestTask: the app name, sign-in page, logo mark (BT), favicon, error messages and docs. Internal names follow (`besttask-api` / `besttask-web` packages, the `besttask` Docker Compose project and images, the CI test database, and the `BESTTASK_TEST_API` / `BESTTASK_TEST_RESTART` variables, which were `TASKFLOW_…`). Browser storage keys changed from `tf_…` to `bt_…`; the app moves existing values over on first load, so nobody is signed out or loses settings.
 - Board redesign:
@@ -44,6 +51,11 @@
 - The list view shows 25 tasks per page (was 10).
 - Manual card order: drag a card up or down within a column, or to a spot in another column, and the order is saved for everyone on the project. New tasks join at the end of their column, and changing a task's status any other way (task panel, card menu, phone) also puts it at the end. "Manual" is the new default sort for the board and list; Priority, Newest, Due date and Title remain in the Sort menu, and while one of those is chosen, dragging only changes the column.
 - API: `POST /tasks/:taskId/move` with `{ status, beforeId }`. Reordering within a column is not recorded as activity; moving to another column is, as a status change.
+
+### Removed
+
+- The workspace Activity page (and its owner-only project and event-type filters). Each project's Activity page, the task panel history and the phone Activity tab remain.
+- API: `GET /workspaces/:workspaceId/activity` is replaced by `GET /projects/:projectId/activity` (paginated, `entityId` for one task's events), readable by every role that can open the project. `GET /workspaces/:workspaceId/tasks` (the cross-project task list behind workspace search and My work) is removed; use `GET /projects/:projectId/tasks`.
 
 ### Fixed
 

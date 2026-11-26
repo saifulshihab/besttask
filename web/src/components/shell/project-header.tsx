@@ -1,15 +1,24 @@
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { Link, useParams } from "@tanstack/react-router";
-import { Plus, Settings } from "lucide-react";
+import { Link, useParams, useRouterState } from "@tanstack/react-router";
+import { Plus } from "lucide-react";
 import { useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Tooltip } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/cn";
 import { projectMembersQuery, projectQuery, workspaceQuery } from "@/lib/queries";
-import type { ProjectTab } from "./project-tabs";
+import { isViewTab, PROJECT_TABS, type ProjectTab } from "./project-tabs";
 import { QuickAddDialog } from "./quick-add-dialog";
 
 const MAX_AVATARS = 4;
+
+/** Titles of the project pages that are not task views. */
+const PAGE_TITLES: Partial<Record<ProjectTab, string>> = {
+  "my-work": "My work",
+  activity: "Activity",
+  members: "Members",
+  settings: "Settings",
+};
 
 // Router links set data-status="active"; styling on it avoids class-order
 // conflicts between the base and active classes.
@@ -25,13 +34,17 @@ export function ProjectHeader() {
   // Avatars are secondary; the header renders without waiting for them.
   const { data: people = [] } = useQuery(projectMembersQuery(projectId));
   const [quickAdd, setQuickAdd] = useState(false);
+  const current = useRouterState({
+    select: (s) => s.location.pathname.split("/").at(-1) as ProjectTab,
+  });
+  // Board, List and Calendar are tabs here; the other pages are in the sidebar.
+  const onView = !PROJECT_TABS.includes(current) || isViewTab(current);
 
-  const canManage = project.role !== "MEMBER";
   const editable = !project.archivedAt;
   const shown = people.filter((p) => p.active).slice(0, MAX_AVATARS);
   const extra = people.filter((p) => p.active).length - shown.length;
 
-  const tab = (to: ProjectTab, label: string, count?: number) => (
+  const tab = (to: ProjectTab, label: string) => (
     <Link
       role="tab"
       to={`/w/$workspaceId/p/$projectId/${to}`}
@@ -41,18 +54,19 @@ export function ProjectHeader() {
       inactiveProps={{ "aria-selected": false }}
     >
       {label}
-      {count !== undefined ? (
-        <span className="ml-1 text-xs font-medium text-muted">{count}</span>
-      ) : null}
     </Link>
   );
 
   return (
-    <header className="flex flex-col gap-3.5 border-b border-line px-7 pt-[18px]">
+    <header className={cn("flex flex-col gap-3.5 border-b border-line px-7 pt-[18px]", !onView && "pb-4.5")}>
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex min-w-[220px] flex-1 flex-col gap-0.5">
-          <span className="text-xs text-muted">{workspace.name} / Projects</span>
-          <h1 className="m-0 text-2xl font-bold tracking-[-0.01em]">{project.name}</h1>
+          <span className="text-xs text-muted">
+            {workspace.name} / {onView ? "Projects" : project.name}
+          </span>
+          <h1 className="m-0 text-2xl font-bold tracking-[-0.01em]">
+            {onView ? project.name : PAGE_TITLES[current]}
+          </h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center -space-x-1.5">
@@ -70,18 +84,6 @@ export function ProjectHeader() {
               </span>
             ) : null}
           </div>
-          {canManage ? (
-            <Tooltip content="Project settings">
-              <Link
-                to="/w/$workspaceId/p/$projectId/settings"
-                params={{ workspaceId, projectId }}
-                aria-label="Project settings"
-                className="flex size-9 items-center justify-center rounded-md border border-line-strong bg-canvas text-ink-2 hover:bg-hover data-[status=active]:border-accent-line data-[status=active]:bg-accent-tint data-[status=active]:text-accent-hover"
-              >
-                <Settings size={16} aria-hidden />
-              </Link>
-            </Tooltip>
-          ) : null}
           <Tooltip content="Restore the project to add tasks" disabled={editable} wrap>
             <Button variant="primary" onClick={() => setQuickAdd(true)} disabled={!editable}>
               <Plus size={15} strokeWidth={2.4} aria-hidden />
@@ -90,14 +92,13 @@ export function ProjectHeader() {
           </Tooltip>
         </div>
       </div>
-      <div role="tablist" aria-label="Project views" className="flex gap-5">
-        {tab("board", "Board")}
-        {tab("list", "List")}
-        {tab("calendar", "Calendar")}
-        {tab("activity", "Activity")}
-        {tab("members", "Members", people.filter((p) => p.active).length || undefined)}
-        {canManage ? tab("settings", "Settings") : null}
-      </div>
+      {onView ? (
+        <div role="tablist" aria-label="Project views" className="flex gap-5">
+          {tab("board", "Board")}
+          {tab("list", "List")}
+          {tab("calendar", "Calendar")}
+        </div>
+      ) : null}
       <QuickAddDialog open={quickAdd} onOpenChange={setQuickAdd} project={project} people={people} />
     </header>
   );

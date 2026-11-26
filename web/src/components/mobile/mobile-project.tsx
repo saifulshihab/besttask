@@ -16,7 +16,6 @@ import { relativeTime } from "@/lib/format";
 import { signOut, useCreateProject, useCreateTask, useMoveTask } from "@/lib/mutations";
 import {
   meQuery,
-  notificationSummaryQuery,
   projectsQuery,
   projectTasksQuery,
   workspaceQuery,
@@ -28,6 +27,7 @@ import type { Me, Priority, ProjectDetail, Task, TaskStatus } from "@/lib/types"
 import { useUpdateProfile } from "@/lib/workspace-mutations";
 import { Sheet, sheetInput } from "./sheet";
 import { badgeText } from "@/components/notifications/notification-bell";
+import { useNotificationSummary } from "@/components/notifications/notification-list";
 
 type Page = "board" | "mine" | "activity" | "more";
 type SheetState =
@@ -227,7 +227,7 @@ export function MobileProject({ workspaceId, project }: { workspaceId: string; p
             ) : null}
           </>
         ) : page === "activity" ? (
-          <MobileActivity workspaceId={workspaceId} projectId={project.id} />
+          <MobileActivity projectId={project.id} />
         ) : (
           <MobileMore workspaceId={workspaceId} project={project} me={me} tasks={tasks} />
         )}
@@ -586,19 +586,19 @@ function ProjectsSheet({
   );
 }
 
-function MobileActivity({ workspaceId, projectId }: { workspaceId: string; projectId: string }) {
+function MobileActivity({ projectId }: { projectId: string }) {
   return (
     <>
       <h1 className="my-1 text-xl font-bold">Activity</h1>
       <Suspense fallback={<p className="py-6 text-center text-muted">Loading activity…</p>}>
-        <MobileActivityList workspaceId={workspaceId} projectId={projectId} />
+        <MobileActivityList projectId={projectId} />
       </Suspense>
     </>
   );
 }
 
-function MobileActivityList({ workspaceId, projectId }: { workspaceId: string; projectId: string }) {
-  const feed = useActivityFeed(workspaceId, { projectId });
+function MobileActivityList({ projectId }: { projectId: string }) {
+  const feed = useActivityFeed(projectId);
   return (
     <>
       <ol className="m-0 flex list-none flex-col gap-0.5 p-0">
@@ -687,7 +687,7 @@ function MobileMore({
         </span>
       </div>
       <nav aria-label="More pages" className="overflow-hidden rounded-xl border border-line bg-canvas">
-        <Link to="/w/$workspaceId/my-work" params={{ workspaceId }} className={link}>
+        <Link to="/w/$workspaceId/p/$projectId/my-work" params={{ workspaceId, projectId: project.id }} className={link}>
           My work
         </Link>
         <Link to="/w/$workspaceId/p/$projectId/list" params={{ workspaceId, projectId: project.id }} className={link}>
@@ -744,7 +744,7 @@ function MobileMore({
 
 /** Header bell: opens the notifications page, with the unread count. */
 function MobileBell({ workspaceId }: { workspaceId: string }) {
-  const { data } = useQuery(notificationSummaryQuery(workspaceId));
+  const { data } = useNotificationSummary(workspaceId);
   const unread = data?.unread ?? 0;
   return (
     <Link

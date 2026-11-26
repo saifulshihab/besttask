@@ -334,7 +334,7 @@ function PanelBody({
           onToggle={(sub) => move.mutate({ id: sub.id, status: sub.status === "DONE" ? "TODO" : "DONE" })}
         />
 
-        <Timeline workspaceId={workspaceId} project={project} task={task} meId={me.id} />
+        <Timeline project={project} task={task} meId={me.id} />
       </div>
 
       {/* Archived projects are read-only, comments included (S15). */}
@@ -685,12 +685,10 @@ function Subtasks({
 const TIMELINE_STEP = 15;
 
 function Timeline({
-  workspaceId,
   project,
   task,
   meId,
 }: {
-  workspaceId: string;
   project: ProjectDetail;
   task: Task;
   meId: string;
@@ -700,7 +698,7 @@ function Timeline({
   const [shown, setShown] = useState({ tab, limit: TIMELINE_STEP });
   if (shown.tab !== tab) setShown({ tab, limit: TIMELINE_STEP });
   const comments = useQuery(taskCommentsQuery(task.id));
-  const activity = useInfiniteQuery(taskActivityQuery(workspaceId, task.id));
+  const activity = useInfiniteQuery(taskActivityQuery(task.projectId, task.id));
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = activity;
 
   type Item =

@@ -24,8 +24,8 @@ authorization or business rules.
 - **Tasks** with status, priority, assignee, due dates, subtasks, and drag-and-drop on boards
 - **Labels** at project scope, attachable to tasks
 - **Comments** (soft-deleted for activity continuity)
-- **Activity** feed per workspace
-- **My work**: your assigned tasks across every project, grouped by due date
+- **Activity** feed per project
+- **My work**: your assigned tasks in a project, grouped by due date
 - **Notifications** in the app for assignments, comments and status changes on your tasks
 - **Members** management with explicit project roles (no invitations)
 
@@ -193,7 +193,6 @@ except register, login, and refresh.
 ### Tasks
 
 - `POST /projects/:projectId/tasks`, `GET /projects/:projectId/tasks`
-- `GET /workspaces/:workspaceId/tasks`
 - `GET /tasks/:taskId`, `PATCH /tasks/:taskId`, `DELETE /tasks/:taskId`
 - `PATCH /tasks/:taskId/status`, `PATCH /tasks/:taskId/assignee`
 - `POST /tasks/:taskId/move` (drag and drop: `{ status, beforeId }` places the task before that card, or last when `beforeId` is null)
@@ -206,12 +205,12 @@ except register, login, and refresh.
 - `PATCH /labels/:labelId`, `DELETE /labels/:labelId`
 - `GET /tasks/:taskId/comments`, `POST /tasks/:taskId/comments`
 - `PATCH /comments/:commentId`, `DELETE /comments/:commentId`
-- `GET /workspaces/:workspaceId/activity`
+- `GET /projects/:projectId/activity` (`entityId` for one task's events)
 
 ### Notifications
 
 - `GET /workspaces/:workspaceId/notifications` (`unread=true` for unread only)
-- `GET /workspaces/:workspaceId/notifications/summary` (`{ unread, overdue, dueToday }`)
+- `GET /workspaces/:workspaceId/notifications/summary` (`{ unread, overdue, dueToday }`; `projectId` limits the due counts to one project)
 - `POST /workspaces/:workspaceId/notifications/read-all`, `PATCH /notifications/:notificationId` (`{ read }`)
 
 ### Roles

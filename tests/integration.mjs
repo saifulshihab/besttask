@@ -253,18 +253,29 @@ try {
   );
   const ownerViews = await request(owner, `/projects/${project.id}/views`);
   check(ownerViews.length === 0, "Saved views are personal");
+  const activity = await request(member, `/projects/${project.id}/activity`);
+  check(
+    activity.data.length > 0 &&
+      activity.data.every((a) => a.projectId === project.id),
+    "Project activity lists that project's events",
+  );
+  const taskEvents = await request(
+    member,
+    `/projects/${project.id}/activity?entityId=${task.id}`,
+  );
+  check(
+    taskEvents.data.length > 0 &&
+      taskEvents.data.every((a) => a.entityId === task.id),
+    "Project activity narrows to one task",
+  );
   await request(
     member,
-    `/workspaces/${ws.id}/activity?entityType=task`,
+    `/projects/${hidden.id}/activity`,
     "GET",
     undefined,
-    403,
+    404,
   );
-  const activity = await request(member, `/workspaces/${ws.id}/activity`);
-  check(
-    activity.data.every((a) => a.projectId === project.id),
-    "Activity stays within assigned projects",
-  );
+  await request(member, `/workspaces/${ws.id}/activity`, "GET", undefined, 404);
   // Notifications: assignment, status changes and comments, never for your
   // own actions, and only for projects you can still open.
   const inbox = (user, query = "") =>
@@ -296,6 +307,14 @@ try {
   check(
     summary.unread === 1 && summary.overdue === 1 && summary.dueToday === 0,
     "Summary counts unread notifications and overdue tasks",
+  );
+  const otherSummary = await request(
+    member,
+    `/workspaces/${ws.id}/notifications/summary?projectId=${hidden.id}`,
+  );
+  check(
+    otherSummary.unread === 1 && otherSummary.overdue === 0,
+    "Due counts narrow to one project; unread stays workspace-wide",
   );
   await request(
     member,

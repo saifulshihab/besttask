@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { workspaceActivityRouter } from "./modules/activity/activity.routes.js";
+import { projectActivityRouter } from "./modules/activity/activity.routes.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 import {
   commentsRouter,
@@ -16,7 +16,6 @@ import {
 import {
   projectTasksRouter,
   tasksRouter,
-  workspaceTasksRouter,
 } from "./modules/tasks/tasks.routes.js";
 import {
   notificationsRouter,
@@ -34,13 +33,12 @@ apiRouter.use("/auth", authRouter);
 // workspace/project/task routers mounted on the shorter prefixes.
 apiRouter.use("/workspaces/:workspaceId/projects", workspaceProjectsRouter);
 apiRouter.use("/projects/:projectId/labels", workspaceLabelsRouter);
-apiRouter.use("/workspaces/:workspaceId/tasks", workspaceTasksRouter);
-apiRouter.use("/workspaces/:workspaceId/activity", workspaceActivityRouter);
 apiRouter.use(
   "/workspaces/:workspaceId/notifications",
   workspaceNotificationsRouter,
 );
 apiRouter.use("/projects/:projectId/tasks", projectTasksRouter);
+apiRouter.use("/projects/:projectId/activity", projectActivityRouter);
 apiRouter.use("/tasks/:taskId/comments", taskCommentsRouter);
 
 apiRouter.use("/workspaces", workspacesRouter);

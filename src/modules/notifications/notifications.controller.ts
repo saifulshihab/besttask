@@ -5,6 +5,7 @@ import {
   listNotificationsQuery,
   markNotificationSchema,
   notificationIdParams,
+  notificationSummaryQuery,
 } from "./notifications.schema.js";
 import * as notificationService from "./notifications.service.js";
 
@@ -15,8 +16,10 @@ export const notificationsController = {
       notificationService.list(actorOf(req), params.workspaceId, query),
   ),
 
-  summary: route({ params: workspaceIdParams }, ({ params, req }) =>
-    notificationService.summary(actorOf(req), params.workspaceId),
+  summary: route(
+    { params: workspaceIdParams, query: notificationSummaryQuery },
+    ({ params, query, req }) =>
+      notificationService.summary(actorOf(req), params.workspaceId, query),
   ),
 
   markAllRead: route({ params: workspaceIdParams }, ({ params, req }) =>

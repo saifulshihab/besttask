@@ -1,13 +1,13 @@
 import { Dialog as BaseDialog } from "@base-ui/react/dialog";
-import { keepPreviousData, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { Search } from "lucide-react";
 import { useDeferredValue, useMemo, useState, type FormEvent } from "react";
-import { api } from "@/lib/api";
-import type { Paginated, Task } from "@/lib/types";
 import { cn } from "@/lib/cn";
-import { projectsQuery, workspaceQuery } from "@/lib/queries";
+import { projectTasksQuery, workspaceQuery } from "@/lib/queries";
+import { useSelectedProject } from "@/lib/selected-project";
 import { useOpener } from "@/lib/use-opener";
+import type { ProjectTab } from "./project-tabs";
 
 interface Item {
   id: string;
@@ -17,9 +17,21 @@ interface Item {
   run: () => void;
 }
 
+const TASK_RESULTS = 8;
+
+const PAGES: { tab: ProjectTab; label: string; manage?: true }[] = [
+  { tab: "board", label: "Board" },
+  { tab: "list", label: "List" },
+  { tab: "calendar", label: "Calendar" },
+  { tab: "my-work", label: "My work" },
+  { tab: "activity", label: "Activity" },
+  { tab: "members", label: "Members" },
+  { tab: "settings", label: "Settings", manage: true },
+];
+
 /**
- * Jump to a project or page. Task search joins this list with the board
- * screen, which brings the task queries it needs.
+ * Searches the selected project only: its tasks by title, description and ID
+ * (V01), and its pages (V02). Other projects are reached with the switcher.
  */
 export function SearchPalette({
   open,
@@ -30,110 +42,51 @@ export function SearchPalette({
 }) {
   const { workspaceId } = useParams({ from: "/_app/w/$workspaceId" });
   const { data: workspace } = useSuspenseQuery(workspaceQuery(workspaceId));
-  const { data: projects } = useSuspenseQuery(projectsQuery(workspaceId));
+  const project = useSelectedProject();
   const navigate = useNavigate();
   const [text, setText] = useState("");
   const [highlight, setHighlight] = useState(0);
-  const q = useDeferredValue(text.trim());
-  // Server-side search across the projects the user can see (V02).
-  const taskResults = useQuery<Task[]>({
-    queryKey: ["workspace", workspaceId, "task-search", q],
-    queryFn: ({ signal }) =>
-      api<Paginated<Task>>(`/workspaces/${workspaceId}/tasks`, {
-        query: { search: q, pageSize: 8, sort: "-updatedAt" },
-        signal,
-      }).then((r) => r.data),
-    enabled: open && q.length >= 2,
-    placeholderData: keepPreviousData,
-    staleTime: 10_000,
-  });
+  const needle = useDeferredValue(text.trim().toLowerCase());
+  // The board's own list: usually cached already, and searched locally.
+  const tasks = useQuery({ ...projectTasksQuery(project?.id ?? ""), enabled: open && !!project });
 
   const items = useMemo<Item[]>(() => {
+    if (!project) return [];
     const close = (go: () => void) => () => {
       onOpenChange(false);
       setText("");
       go();
     };
-    const all: Item[] = [
-      ...projects
-        .filter((p) => !p.archivedAt)
-        .flatMap((p) =>
-          (["board", "list", "calendar"] as const).map((tab) => ({
-            id: `${p.id}-${tab}`,
-            kind: "Project",
-            label: `${p.name} · ${tab.charAt(0).toUpperCase()}${tab.slice(1)}`,
-            hint: p.key,
-            run: close(() =>
-              navigate({
-                to: `/w/$workspaceId/p/$projectId/${tab}`,
-                params: { workspaceId, projectId: p.id },
-              }),
-            ),
-          })),
-        ),
-      {
-        id: "my-work",
+    const params = { workspaceId, projectId: project.id };
+    const manage = workspace.role === "WORKSPACE_OWNER" || project.role !== "MEMBER";
+    const pages: Item[] = PAGES.filter((p) => !p.manage || manage)
+      .filter((p) => !needle || p.label.toLowerCase().includes(needle))
+      .map((p) => ({
+        id: `page-${p.tab}`,
         kind: "Page",
-        label: "My work",
-        hint: workspace.name,
-        run: close(() => navigate({ to: "/w/$workspaceId/my-work", params: { workspaceId } })),
-      },
-      {
-        id: "notifications",
-        kind: "Page",
-        label: "Notifications",
-        hint: workspace.name,
-        run: close(() => navigate({ to: "/w/$workspaceId/notifications", params: { workspaceId } })),
-      },
-      {
-        id: "activity",
-        kind: "Page",
-        label: "Activity",
-        hint: workspace.name,
-        run: close(() => navigate({ to: "/w/$workspaceId/activity", params: { workspaceId } })),
-      },
-      {
-        id: "members",
-        kind: "Page",
-        label: "Members",
-        hint: workspace.name,
-        run: close(() => navigate({ to: "/w/$workspaceId/members", params: { workspaceId } })),
-      },
-      {
-        id: "profile",
-        kind: "Page",
-        label: "Profile",
-        hint: "",
-        run: close(() => navigate({ to: "/w/$workspaceId/profile", params: { workspaceId } })),
-      },
-      {
-        id: "account",
-        kind: "Page",
-        label: "Account settings",
-        hint: "",
-        run: close(() => navigate({ to: "/w/$workspaceId/account", params: { workspaceId } })),
-      },
-    ];
-    const needle = text.trim().toLowerCase();
-    const pages = needle ? all.filter((i) => i.label.toLowerCase().includes(needle)) : all;
-    const tasks: Item[] =
-      needle.length >= 2
-        ? (taskResults.data ?? []).map((t) => ({
+        label: p.label,
+        hint: project.name,
+        run: close(() => navigate({ to: `/w/$workspaceId/p/$projectId/${p.tab}`, params })),
+      }));
+    const found: Item[] = needle
+      ? (tasks.data ?? [])
+          .filter((t) =>
+            `${t.title} ${t.description ?? ""} ${t.key}`.toLowerCase().includes(needle),
+          )
+          .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+          .slice(0, TASK_RESULTS)
+          .map((t) => ({
             id: t.id,
             kind: "Task",
             label: `${t.key} ${t.title}`,
-            hint: t.project.name,
+            hint: "",
             run: close(() =>
-              navigate({
-                to: "/w/$workspaceId/p/$projectId/board",
-                params: { workspaceId, projectId: t.projectId },
-                search: { task: t.id },
-              }),
+              navigate({ to: "/w/$workspaceId/p/$projectId/board", params, search: { task: t.id } }),
             ),
           }))
-        : [];
-    return [...tasks, ...pages];
-  }, [projects, workspace.name, workspaceId, navigate, onOpenChange, text, taskResults.data]);
+      : [];
+    return [...found, ...pages];
+  }, [project, workspace.role, workspaceId, navigate, onOpenChange, needle, tasks.data]);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -157,7 +110,7 @@ export function SearchPalette({
             <Search size={16} className="text-muted" aria-hidden />
             <input
               autoFocus
-              aria-label="Search tasks, projects and pages"
+              aria-label={project ? `Search ${project.name}` : "Search"}
               value={text}
               onChange={(e) => {
                 setText(e.target.value);
@@ -172,7 +125,7 @@ export function SearchPalette({
                   setHighlight((h) => Math.max(h - 1, 0));
                 }
               }}
-              placeholder="Search tasks, or jump to a project or page"
+              placeholder={project ? `Search tasks or pages in ${project.name}` : "Search"}
               className="h-[52px] flex-1 border-0 text-md outline-none"
             />
           </form>
@@ -196,7 +149,9 @@ export function SearchPalette({
               </button>
             ))}
             {items.length === 0 ? (
-              <p className="m-0 p-4 text-sm text-muted">No matches.</p>
+              <p className="m-0 p-4 text-sm text-muted">
+                {project ? (tasks.isPending && needle ? "Searching…" : "No matches.") : "No project selected."}
+              </p>
             ) : null}
           </div>
         </BaseDialog.Popup>

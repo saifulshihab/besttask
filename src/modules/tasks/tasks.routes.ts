@@ -8,12 +8,6 @@ projectTasksRouter.use(requireAuth);
 projectTasksRouter.post("/", tasksController.create);
 projectTasksRouter.get("/", tasksController.listForProject);
 
-// Cross-project view: the board every filter in listTasksQuery targets.
-export const workspaceTasksRouter = Router({ mergeParams: true });
-
-workspaceTasksRouter.use(requireAuth);
-workspaceTasksRouter.get("/", tasksController.listForWorkspace);
-
 export const tasksRouter = Router();
 
 tasksRouter.use(requireAuth);

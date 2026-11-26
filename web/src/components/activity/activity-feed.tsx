@@ -6,40 +6,23 @@ import { Button } from "@/components/ui/button";
 import { describe, type ActivityEntry } from "@/lib/activity";
 import { STATUSES, statusPillColors } from "@/lib/design";
 import { dayHeading, relativeTime } from "@/lib/format";
-import { ACTIVITY_PAGE_SIZE, activityQuery, projectsQuery, type ActivityFilters } from "@/lib/queries";
-
-export type ActivityType = ActivityEntry["type"] | "all";
-
-export const ACTIVITY_TYPES: { id: ActivityType; name: string }[] = [
-  { id: "all", name: "All changes" },
-  { id: "created", name: "Created tasks" },
-  { id: "moved", name: "Status changes" },
-  { id: "edits", name: "Edits (priority, assignee, dates, labels)" },
-  { id: "comment", name: "Comments" },
-  { id: "deleted", name: "Deletions" },
-  { id: "other", name: "Projects, members & settings" },
-];
+import { ACTIVITY_PAGE_SIZE, activityQuery, projectsQuery } from "@/lib/queries";
 
 /** Entries shown at first and added by each "Load more". */
 const STEP = ACTIVITY_PAGE_SIZE;
-/** Pages fetched automatically per request when a type filter matches little. */
-const AUTO_PAGES = 10;
 
 /**
- * Pages through activity for the feed. It shows STEP entries and adds STEP on
- * each loadMore(). Types are worked out on the client (one event can be
- * several entries), so with a type filter it keeps fetching pages until it
- * has enough matches, at most AUTO_PAGES per request; then the reader can ask
- * for more again.
+ * Pages through a project's activity for the feed. It shows STEP entries and
+ * adds STEP on each loadMore(); one event can describe several entries, so
+ * the count is of entries, not events.
  */
-export function useActivityFeed(workspaceId: string, filters: ActivityFilters, type: ActivityType = "all") {
-  const query = useSuspenseInfiniteQuery(activityQuery(workspaceId, filters));
+export function useActivityFeed(projectId: string) {
+  const query = useSuspenseInfiniteQuery(activityQuery(projectId));
   const { data, hasNextPage, isFetchingNextPage, fetchNextPage } = query;
 
-  // Reset to the first STEP whenever the view changes (render-time sync).
-  const view = `${JSON.stringify(filters)}|${type}`;
-  const [state, setState] = useState({ view, target: STEP, from: 1 });
-  if (state.view !== view) setState({ view, target: STEP, from: data.pages.length });
+  // Reset to the first STEP when the project changes (render-time sync).
+  const [state, setState] = useState({ projectId, target: STEP });
+  if (state.projectId !== projectId) setState({ projectId, target: STEP });
 
   const entries = useMemo(() => {
     // New events shift offset pages, so an event can arrive twice; keep one.
@@ -47,36 +30,26 @@ export function useActivityFeed(workspaceId: string, filters: ActivityFilters, t
     return data.pages
       .flatMap((page) => page.data)
       .filter((e) => !seen.has(e.id) && seen.add(e.id))
-      .flatMap(describe)
-      .filter((entry) => type === "all" || entry.type === type);
-  }, [data, type]);
+      .flatMap(describe);
+  }, [data]);
 
   const short = entries.length < state.target;
-  const canAuto = data.pages.length - state.from < AUTO_PAGES;
   useEffect(() => {
-    if (short && canAuto && hasNextPage && !isFetchingNextPage) void fetchNextPage();
-  }, [short, canAuto, hasNextPage, isFetchingNextPage, fetchNextPage]);
+    if (short && hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [short, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return {
     entries: entries.slice(0, state.target),
     hasMore: entries.length > state.target || hasNextPage,
-    loading: isFetchingNextPage || (short && canAuto && hasNextPage),
-    loadMore: () => setState((s) => ({ ...s, target: s.target + STEP, from: data.pages.length })),
+    loading: isFetchingNextPage || (short && hasNextPage),
+    loadMore: () => setState((s) => ({ ...s, target: s.target + STEP })),
   };
 }
 
 /** Day-grouped activity list (prototype Activity screen) with Load more. */
-export function ActivityFeed({
-  workspaceId,
-  filters = {},
-  type = "all",
-}: {
-  workspaceId: string;
-  filters?: ActivityFilters;
-  type?: ActivityType;
-}) {
+export function ActivityFeed({ workspaceId, projectId }: { workspaceId: string; projectId: string }) {
   const { data: projects } = useSuspenseQuery(projectsQuery(workspaceId));
-  const feed = useActivityFeed(workspaceId, filters, type);
+  const feed = useActivityFeed(projectId);
 
   const days = useMemo(() => {
     const groups: { day: string; entries: ActivityEntry[] }[] = [];
@@ -90,19 +63,12 @@ export function ActivityFeed({
   }, [feed.entries]);
 
   if (days.length === 0 && feed.loading)
-    return <p className="m-0 p-7 text-center text-sm text-muted">Looking for matching activity…</p>;
+    return <p className="m-0 p-7 text-center text-sm text-muted">Loading activity…</p>;
 
   if (days.length === 0)
     return (
       <div className="flex flex-col items-center gap-3 rounded-xl border-[1.5px] border-dashed border-line-strong p-7 text-center text-muted">
-        <p className="m-0">
-          {type === "all"
-            ? "Nothing has happened here yet."
-            : feed.hasMore
-              ? "Nothing matches this filter in the recent activity."
-              : "No activity matches these filters."}
-        </p>
-        {feed.hasMore ? <Button onClick={feed.loadMore}>Search older activity</Button> : null}
+        <p className="m-0">Nothing has happened here yet.</p>
       </div>
     );
 
@@ -186,7 +152,7 @@ export function ActivityFeed({
           </Button>
         </div>
       ) : days.length > 0 ? (
-        <p className="m-0 pt-1 text-center text-xs text-muted">That’s everything{type === "all" ? "" : " for this filter"}.</p>
+        <p className="m-0 pt-1 text-center text-xs text-muted">That’s everything.</p>
       ) : null}
     </>
   );

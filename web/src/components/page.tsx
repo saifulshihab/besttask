@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 /**
- * The column every workspace-level page (Activity, Members, Settings, Profile,
- * Account) sits in. One width for all, so the title doesn't shift between
+ * The column every full-width page (Members, Settings, Profile, Account, My
+ * work) sits in. One width for all, so the title doesn't shift between
  * pages. `tinted` puts white cards on the grey page used by settings screens.
  */
 export function Page({ children, tinted = false }: { children: ReactNode; tinted?: boolean }) {

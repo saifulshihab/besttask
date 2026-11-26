@@ -9,7 +9,17 @@ import { STATUSES } from "@/lib/design";
 import { relativeTime } from "@/lib/format";
 import { useMarkNotification } from "@/lib/notification-mutations";
 import { notificationsQuery, notificationSummaryQuery } from "@/lib/queries";
+import { useSelectedProject } from "@/lib/selected-project";
 import type { AppNotification } from "@/lib/types";
+
+/**
+ * Unread count for the workspace, and due counts for the selected project
+ * (so they match its My work, C15).
+ */
+export const useNotificationSummary = (workspaceId: string) => {
+  const project = useSelectedProject();
+  return useQuery(notificationSummaryQuery(workspaceId, project?.id ?? null));
+};
 import { useIsMobile } from "@/lib/use-mobile";
 
 /** "Lina assigned you WEB-12", with the names and IDs in bold. */
@@ -35,12 +45,14 @@ const plain = (n: AppNotification) => {
 };
 
 /**
- * Overdue and due-today counts, linking to My work. They are worked out when
- * asked, not stored, so they never pile up as notifications.
+ * Overdue and due-today counts in the selected project, linking to its My
+ * work. They are worked out when asked, not stored, so they never pile up as
+ * notifications.
  */
 export function DueBanner({ workspaceId, onNavigate }: { workspaceId: string; onNavigate?: () => void }) {
-  const { data } = useQuery(notificationSummaryQuery(workspaceId));
-  if (!data || (data.overdue === 0 && data.dueToday === 0)) return null;
+  const project = useSelectedProject();
+  const { data } = useNotificationSummary(workspaceId);
+  if (!project || !data || (data.overdue === 0 && data.dueToday === 0)) return null;
   const tasks = (n: number) => `${n} task${n === 1 ? "" : "s"}`;
   // "2 tasks overdue, 1 due today" / "1 task due today"
   const text = [
@@ -51,8 +63,8 @@ export function DueBanner({ workspaceId, onNavigate }: { workspaceId: string; on
     .join(", ");
   return (
     <Link
-      to="/w/$workspaceId/my-work"
-      params={{ workspaceId }}
+      to="/w/$workspaceId/p/$projectId/my-work"
+      params={{ workspaceId, projectId: project.id }}
       onClick={onNavigate}
       className={cn(
         "flex items-center gap-2.5 rounded-lg border px-3 py-2 text-sm no-underline",
@@ -61,7 +73,7 @@ export function DueBanner({ workspaceId, onNavigate }: { workspaceId: string; on
     >
       <AlarmClock size={16} aria-hidden className="shrink-0" />
       <span className="flex-1">
-        {text}
+        {text} in {project.name}
       </span>
       <span className="text-xs font-semibold">My work →</span>
     </Link>

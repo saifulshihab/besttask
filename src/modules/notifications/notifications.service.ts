@@ -5,7 +5,10 @@ import { requireMembership, visibleProjects } from "../../lib/rbac.js";
 import { TaskStatus } from "../../generated/prisma/enums.js";
 import type { Actor } from "../../lib/actor.js";
 import type { Prisma } from "../../generated/prisma/client.js";
-import type { ListNotificationsQuery } from "./notifications.schema.js";
+import type {
+  ListNotificationsQuery,
+  NotificationSummaryQuery,
+} from "./notifications.schema.js";
 
 const include = {
   actor: { select: { id: true, name: true, email: true, avatar: true } },
@@ -81,10 +84,15 @@ const todayIn = (timezone: string) => {
 
 /**
  * The bell's numbers: unread notifications, and the actor's open tasks that
- * are overdue or due today. Due dates are calendar days stored at UTC
+ * are overdue or due today (in one project when `projectId` is given, to
+ * match that project's My work). Due dates are calendar days stored at UTC
  * midnight, compared with today in the actor's own timezone.
  */
-export const summary = async (actor: Actor, workspaceId: string) => {
+export const summary = async (
+  actor: Actor,
+  workspaceId: string,
+  q: NotificationSummaryQuery = {},
+) => {
   await requireMembership(actor.id, workspaceId);
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: actor.id },
@@ -97,6 +105,7 @@ export const summary = async (actor: Actor, workspaceId: string) => {
     deletedAt: null,
     status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] },
     project: { ...visibleProjects(actor.id, workspaceId), archivedAt: null },
+    ...(q.projectId ? { projectId: q.projectId } : {}),
   };
   const [unread, overdue, dueToday] = await Promise.all([
     prisma.notification.count({

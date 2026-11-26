@@ -1,7 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
-import { toast } from "@/lib/toast";
+import { toast, toastError } from "@/lib/toast";
 import { Page, PageHeader } from "@/components/page";
 import { SeatMeter, SeatStepper } from "@/components/seats";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
 import { Avatar } from "@/components/ui/avatar";
 import { seatState } from "@/lib/design";
+import { useRestoreProject } from "@/lib/mutations";
 import { useUpdateProject } from "@/lib/project-mutations";
 import { projectsQuery, workspaceMembersQuery, workspaceQuery } from "@/lib/queries";
 import type { ProjectListItem, Role } from "@/lib/types";
@@ -44,6 +45,7 @@ function WorkspaceSettings() {
   const [deleting, setDeleting] = useState(false);
   const [transferring, setTransferring] = useState(false);
   const active = projects.filter((p) => !p.archivedAt);
+  const archived = projects.filter((p) => p.archivedAt);
 
   const saveName = (event: FormEvent) => {
     event.preventDefault();
@@ -99,6 +101,24 @@ function WorkspaceSettings() {
             ))}
             {active.length === 0 ? (
               <li className="p-6 text-center text-sm text-muted">No projects yet.</li>
+            ) : null}
+          </ul>
+        </section>
+
+        <section className={card}>
+          <div className="flex flex-col gap-0.5">
+            <h2 className="m-0 text-md font-semibold">Archived projects</h2>
+            <p className="m-0 text-sm text-muted">
+              Archived projects are read-only and can’t be opened from the project switcher. Restoring one makes it
+              editable again for everyone on it.
+            </p>
+          </div>
+          <ul className="m-0 list-none overflow-hidden rounded-xl border border-line p-0">
+            {archived.map((project) => (
+              <ArchivedRow key={project.id} workspaceId={workspaceId} project={project} />
+            ))}
+            {archived.length === 0 ? (
+              <li className="p-6 text-center text-sm text-muted">No archived projects.</li>
             ) : null}
           </ul>
         </section>
@@ -177,6 +197,40 @@ function SeatRow({ workspaceId, project }: { workspaceId: string; project: Proje
           update.mutate({ seats }, { onSuccess: () => toast(`${project.name}: ${seats} seats`) })
         }
       />
+    </li>
+  );
+}
+
+/** An archived project with Restore (S13, owner only like this page). */
+function ArchivedRow({ workspaceId, project }: { workspaceId: string; project: ProjectListItem }) {
+  const restore = useRestoreProject(workspaceId);
+  const navigate = Route.useNavigate();
+  return (
+    <li className="flex items-center gap-3 border-b border-line-soft px-4 py-3 last:border-b-0">
+      <span className="size-2.5 shrink-0 rounded-[3px]" style={{ background: project.color }} />
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate text-sm font-semibold">{project.name}</span>
+        <span className="text-xs text-muted">
+          {project.key} · {project._count.members} member{project._count.members === 1 ? "" : "s"}
+        </span>
+      </span>
+      <Button
+        disabled={restore.isPending}
+        onClick={() =>
+          restore.mutate(project.id, {
+            onSuccess: () => {
+              toast(`Restored ${project.name}`);
+              void navigate({
+                to: "/w/$workspaceId/p/$projectId/board",
+                params: { workspaceId, projectId: project.id },
+              });
+            },
+            onError: (error) => toastError(error),
+          })
+        }
+      >
+        {restore.isPending ? "Restoring…" : "Restore"}
+      </Button>
     </li>
   );
 }

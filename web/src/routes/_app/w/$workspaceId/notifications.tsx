@@ -3,7 +3,7 @@ import { z } from "zod";
 import { NotificationTools } from "@/components/notifications/notification-bell";
 import { DueBanner, NotificationList } from "@/components/notifications/notification-list";
 import { Page, PageHeader } from "@/components/page";
-import { notificationsQuery, notificationSummaryQuery } from "@/lib/queries";
+import { notificationsQuery } from "@/lib/queries";
 
 const searchSchema = z.object({
   unread: z.boolean().optional().catch(undefined),
@@ -13,7 +13,6 @@ const searchSchema = z.object({
 export const Route = createFileRoute("/_app/w/$workspaceId/notifications")({
   validateSearch: searchSchema,
   loader: ({ context: { queryClient }, params: { workspaceId } }) => {
-    void queryClient.prefetchQuery(notificationSummaryQuery(workspaceId));
     void queryClient.prefetchInfiniteQuery(notificationsQuery(workspaceId));
   },
   component: NotificationsPage,

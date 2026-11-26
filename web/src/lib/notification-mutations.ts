@@ -22,7 +22,7 @@ const writeNotifications = (
   );
 
 const bumpUnread = (qc: QueryClient, workspaceId: string, by: number | "clear") =>
-  qc.setQueryData<NotificationSummary>(keys.notificationSummary(workspaceId), (s) =>
+  qc.setQueriesData<NotificationSummary>({ queryKey: keys.allNotificationSummaries(workspaceId) }, (s) =>
     s && { ...s, unread: by === "clear" ? 0 : Math.max(0, s.unread + by) },
   );
 
@@ -43,7 +43,7 @@ export const useMarkNotification = (workspaceId: string) => {
     },
     // The unread-only list keeps a just-read row until it is reopened, so
     // the row does not jump away from under the pointer.
-    onSettled: () => qc.invalidateQueries({ queryKey: keys.notificationSummary(workspaceId) }),
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.allNotificationSummaries(workspaceId) }),
   });
 };
 
