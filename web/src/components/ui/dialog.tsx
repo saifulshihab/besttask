@@ -28,12 +28,12 @@ export function Dialog({
   return (
     <BaseDialog.Root open={open} onOpenChange={onOpenChange}>
       <BaseDialog.Portal>
-        <BaseDialog.Backdrop className="fixed inset-0 z-40 bg-[rgba(28,25,23,0.36)] transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
+        <BaseDialog.Backdrop className="fixed inset-0 z-40 bg-backdrop transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
         <BaseDialog.Popup
           role={role}
           finalFocus={opener}
           className={cn(
-            "fixed top-20 left-1/2 z-50 flex w-[calc(100%-32px)] -translate-x-1/2 flex-col gap-3.5 rounded-xl bg-canvas p-5 shadow-modal outline-none",
+            "fixed top-20 left-1/2 z-50 flex w-[calc(100%-32px)] -translate-x-1/2 flex-col gap-3.5 rounded-xl bg-raised p-5 shadow-modal ring-1 ring-raised-edge outline-none",
             "transition-[opacity,translate] duration-150 data-[ending-style]:translate-y-1 data-[ending-style]:opacity-0 data-[starting-style]:translate-y-1 data-[starting-style]:opacity-0",
             width,
           )}

@@ -74,6 +74,7 @@
 
 ### Fixed
 
+- In dark mode, dialogs, the task panel, ⌘K, phone sheets, menus and pickers no longer blend into the page behind them: they sit on a lighter surface with a hairline edge, over a darker backdrop. Light mode is unchanged.
 - Signing out and then into a different account no longer opens the previous account's page and shows "Workspace not available". Signing out now always returns to your default workspace after the next sign-in; after an expired session (or a sign-out in another tab) you still come back to the page you were on, but only if the same account signs in again.
 - Profile photos now show wherever a person appears (board cards, list rows, comments, activity), filled in from member lists the app already loads.
 

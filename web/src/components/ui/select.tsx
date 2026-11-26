@@ -103,7 +103,7 @@ export function Select<T extends string>({
         >
           <BaseSelect.Popup
             className={cn(
-              "max-h-[min(var(--available-height),320px)] min-w-(--anchor-width) overflow-y-auto rounded-lg border border-line bg-canvas p-1.5 shadow-popover outline-none",
+              "max-h-[min(var(--available-height),320px)] min-w-(--anchor-width) overflow-y-auto rounded-lg border border-line bg-raised p-1.5 shadow-popover outline-none",
               "origin-(--transform-origin) transition-[opacity,scale] duration-100 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
               popupClassName,
             )}

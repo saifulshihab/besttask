@@ -42,6 +42,13 @@
   --color-menu-hover: #f5f5f4;
   --color-row-hover: #fafaf9;
 
+  /* Overlays (dialogs, drawers, sheets, popovers). In light mode they share
+     the page color and rely on shadow; dark mode lifts them (see below). */
+  --color-raised: #ffffff;
+  --color-raised-edge: transparent;
+  --color-backdrop: rgba(28, 25, 23, 0.36);
+  --color-backdrop-soft: rgba(28, 25, 23, 0.28);
+
   /* Board: lanes sit on the page, cards sit on lanes. */
   --color-lane: #f4f3f1;
   --color-card: #ffffff;
@@ -112,6 +119,12 @@
   --color-hover: #2c2826;
   --color-menu-hover: #292524;
   --color-row-hover: #211d1b;
+  /* Shadows barely show on a dark page, so overlays read as raised by being
+     lighter than the canvas, with a hairline edge and a darker backdrop. */
+  --color-raised: #262220;
+  --color-raised-edge: #3a3532;
+  --color-backdrop: rgba(0, 0, 0, 0.6);
+  --color-backdrop-soft: rgba(0, 0, 0, 0.5);
   --color-lane: #242120;
   --color-card: #2b2725;
   --color-line: #36312e;

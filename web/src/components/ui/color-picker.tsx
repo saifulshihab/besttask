@@ -197,7 +197,7 @@ export function ColorField({
               <Popover.Positioner side="bottom" align="start" sideOffset={8} collisionPadding={8} className="z-[60]">
                 <Popover.Popup
                   className={cn(
-                    "rounded-lg border border-line bg-canvas p-3 shadow-popover outline-none",
+                    "rounded-lg border border-line bg-raised p-3 shadow-popover outline-none",
                     "origin-(--transform-origin) transition-[opacity,scale] duration-100 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
                   )}
                 >
@@ -247,7 +247,7 @@ export function ColorButton({
         <Popover.Positioner side="bottom" align="start" sideOffset={6} collisionPadding={8} className="z-[60]">
           <Popover.Popup
             className={cn(
-              "flex flex-col gap-3 rounded-lg border border-line bg-canvas p-3 shadow-popover outline-none",
+              "flex flex-col gap-3 rounded-lg border border-line bg-raised p-3 shadow-popover outline-none",
               "origin-(--transform-origin) transition-[opacity,scale] duration-100 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
             )}
           >

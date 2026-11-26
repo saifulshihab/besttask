@@ -112,7 +112,7 @@ export function DatePicker({
         <Popover.Positioner side="bottom" align="start" sideOffset={4} collisionPadding={8} className="z-[60]">
           <Popover.Popup
             className={cn(
-              "flex rounded-lg border border-line bg-canvas shadow-popover outline-none max-sm:w-(--anchor-width) max-sm:flex-col max-sm:rounded-xl",
+              "flex rounded-lg border border-line bg-raised shadow-popover outline-none max-sm:w-(--anchor-width) max-sm:flex-col max-sm:rounded-xl",
               "origin-(--transform-origin) transition-[opacity,scale] duration-100 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
             )}
           >

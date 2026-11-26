@@ -104,8 +104,8 @@ export function SearchPalette({
       }}
     >
       <BaseDialog.Portal>
-        <BaseDialog.Backdrop className="fixed inset-0 z-40 bg-[rgba(28,25,23,0.36)]" />
-        <BaseDialog.Popup finalFocus={opener} className="fixed top-20 left-1/2 z-50 flex w-[calc(100%-32px)] max-w-[560px] -translate-x-1/2 flex-col overflow-hidden rounded-xl bg-canvas shadow-modal outline-none">
+        <BaseDialog.Backdrop className="fixed inset-0 z-40 bg-backdrop" />
+        <BaseDialog.Popup finalFocus={opener} className="fixed top-20 left-1/2 z-50 flex w-[calc(100%-32px)] max-w-[560px] -translate-x-1/2 flex-col overflow-hidden rounded-xl bg-raised shadow-modal ring-1 ring-raised-edge outline-none">
           <BaseDialog.Title className="sr-only">Search</BaseDialog.Title>
           <form onSubmit={submit} className="flex items-center gap-2.5 border-b border-line px-4">
             <Search size={16} className="text-muted" aria-hidden />

@@ -19,8 +19,8 @@ export function Sheet({
   return (
     <BaseDialog.Root open={open} onOpenChange={onOpenChange}>
       <BaseDialog.Portal>
-        <BaseDialog.Backdrop className="fixed inset-0 z-40 bg-black/50 transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
-        <BaseDialog.Popup finalFocus={opener} className="fixed inset-x-0 bottom-0 z-50 flex max-h-[80%] flex-col gap-3 overflow-y-auto rounded-t-[20px] bg-canvas px-4 pt-2.5 pb-7 outline-none transition-transform duration-200 data-[ending-style]:translate-y-full data-[starting-style]:translate-y-full">
+        <BaseDialog.Backdrop className="fixed inset-0 z-40 bg-backdrop transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
+        <BaseDialog.Popup finalFocus={opener} className="fixed inset-x-0 bottom-0 z-50 flex max-h-[80%] flex-col gap-3 overflow-y-auto rounded-t-[20px] border-t border-raised-edge bg-raised px-4 pt-2.5 pb-7 outline-none transition-transform duration-200 data-[ending-style]:translate-y-full data-[starting-style]:translate-y-full">
           <span aria-hidden className="h-1 w-10 self-center rounded-[2px] bg-line" />
           <div className="flex items-center gap-2">
             <BaseDialog.Title className="m-0 flex-1 text-[17px] font-bold">{title}</BaseDialog.Title>

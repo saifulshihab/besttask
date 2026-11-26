@@ -80,7 +80,7 @@ export function NotificationBell({ workspaceId }: { workspaceId: string }) {
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner side="right" align="start" sideOffset={10} collisionPadding={8} className="z-40">
-          <Popover.Popup className="flex max-h-[min(640px,calc(100svh-24px))] w-[400px] flex-col rounded-xl border border-line bg-canvas shadow-popover outline-none">
+          <Popover.Popup className="flex max-h-[min(640px,calc(100svh-24px))] w-[400px] flex-col rounded-xl border border-line bg-raised shadow-popover outline-none">
             <div className="flex flex-col gap-2 border-b border-line-soft p-3 pb-2">
               <Popover.Title className="m-0 text-base font-semibold">Notifications</Popover.Title>
               <NotificationTools workspaceId={workspaceId} unreadOnly={unreadOnly} onUnreadOnly={setUnreadOnly} />

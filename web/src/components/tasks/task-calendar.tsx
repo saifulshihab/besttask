@@ -425,7 +425,7 @@ function MoreTasks({
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner side="bottom" align="start" sideOffset={4} collisionPadding={8} className="z-30">
-          <Popover.Popup className="flex w-[260px] flex-col gap-1 rounded-lg border border-line bg-canvas p-2 shadow-popover outline-none">
+          <Popover.Popup className="flex w-[260px] flex-col gap-1 rounded-lg border border-line bg-raised p-2 shadow-popover outline-none">
             <Popover.Title className="m-0 px-1 pb-1 text-xs font-semibold text-ink-2">{longDay(day)}</Popover.Title>
             {tasks.map((task) => (
               <button

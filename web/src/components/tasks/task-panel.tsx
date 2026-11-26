@@ -82,11 +82,11 @@ export function TaskPanel({
   return (
     <BaseDialog.Root open onOpenChange={(open) => !open && onClose()}>
       <BaseDialog.Portal>
-        <BaseDialog.Backdrop className="fixed inset-0 z-30 bg-[rgba(28,25,23,0.28)] transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
+        <BaseDialog.Backdrop className="fixed inset-0 z-30 bg-backdrop-soft transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
         <BaseDialog.Popup
           aria-label={task ? `Task ${task.key}` : "Task"}
           className={cn(
-            "fixed top-0 right-0 bottom-0 z-30 flex max-w-full flex-col bg-canvas shadow-[-12px_0_32px_rgba(28,25,23,0.18)] outline-none",
+            "fixed top-0 right-0 bottom-0 z-30 flex max-w-full flex-col border-l border-raised-edge bg-raised shadow-[-12px_0_32px_rgba(28,25,23,0.18)] outline-none",
             "transition-transform duration-200 data-[ending-style]:translate-x-8 data-[starting-style]:translate-x-8",
             full ? "w-full" : "w-[620px]",
           )}
@@ -515,7 +515,7 @@ function LabelsField({
           </Popover.Trigger>
           <Popover.Portal>
             <Popover.Positioner side="bottom" align="start" sideOffset={6} collisionPadding={8} className="z-40">
-              <Popover.Popup className="flex max-h-(--available-height) w-[260px] flex-col gap-1 overflow-y-auto rounded-lg border border-line bg-canvas p-2 shadow-popover outline-none">
+              <Popover.Popup className="flex max-h-(--available-height) w-[260px] flex-col gap-1 overflow-y-auto rounded-lg border border-line bg-raised p-2 shadow-popover outline-none">
                 <form onSubmit={createAndAdd} className="flex">
                   <label className="flex flex-1">
                     <span className="sr-only">Find or create label</span>

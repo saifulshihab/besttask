@@ -35,7 +35,7 @@ export function MenuPopup({
       >
         <BaseMenu.Popup
           className={cn(
-            "flex max-h-(--available-height) min-w-[180px] flex-col gap-0.5 overflow-y-auto rounded-lg border border-line bg-canvas p-1.5 shadow-popover outline-none",
+            "flex max-h-(--available-height) min-w-[180px] flex-col gap-0.5 overflow-y-auto rounded-lg border border-line bg-raised p-1.5 shadow-popover outline-none",
             "origin-(--transform-origin) transition-[opacity,scale] duration-100 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
             matchTrigger && "w-(--anchor-width)",
             className,
