@@ -224,3 +224,30 @@ export interface NotificationSummary {
   overdue: number;
   dueToday: number;
 }
+
+/** A project chat channel. Every project has one default (#general). */
+export interface Channel {
+  id: string;
+  projectId: string;
+  name: string;
+  isDefault: boolean;
+  createdAt: string;
+}
+
+/**
+ * One chat message as the socket delivers it. Messages are never stored by
+ * the API; they exist only in the tabs that were connected when sent.
+ */
+export interface ChatMessage {
+  id: string;
+  clientId: string | null;
+  workspaceId: string;
+  projectId: string;
+  /** Set for channel messages… */
+  channelId: string | null;
+  /** …or the person a direct message was sent to. */
+  recipientId: string | null;
+  author: UserSummary;
+  body: string;
+  sentAt: string;
+}

@@ -27,7 +27,11 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3100,
       host: true,
-      proxy: { "/api": { target: apiTarget, changeOrigin: true } },
+      proxy: {
+        "/api": { target: apiTarget, changeOrigin: true },
+        // Chat's socket.io connection, WebSocket upgrades included.
+        "/socket.io": { target: apiTarget, changeOrigin: true, ws: true },
+      },
       // Docker Desktop bind mounts do not deliver file events.
       watch: env.VITE_POLLING === "true" ? { usePolling: true } : undefined,
     },

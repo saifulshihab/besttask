@@ -113,6 +113,21 @@ export const describe = (event: ActivityEvent): ActivityEntry[] => {
       return one({ verb: "deleted the label", target: title, type: "deleted" });
     case "label.restored":
       return one({ verb: "restored the label", target: title, type: "other" });
+    case "channel.created":
+      return one({ verb: "created the channel", target: title && `#${title}`, type: "other" });
+    case "channel.updated": {
+      const from = str((m.changes as { name?: { from?: unknown } } | undefined)?.name?.from);
+      return one({
+        verb: "renamed the channel",
+        target: from ? `#${from}` : undefined,
+        tail: title ? ` to #${title}` : "",
+        type: "other",
+      });
+    }
+    case "channel.deleted":
+      return one({ verb: "deleted the channel", target: title && `#${title}`, type: "deleted" });
+    case "channel.restored":
+      return one({ verb: "restored a deleted channel", type: "other" });
     case "member.added":
       return one({ verb: "added", target: person(m.userId), tail: " to the workspace", type: "other" });
     case "member.deactivated":

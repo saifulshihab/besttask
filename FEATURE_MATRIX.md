@@ -199,16 +199,31 @@ All allowed task actions below apply to accessible, active projects. Admins/memb
 | C14 | Mark own notifications read or unread, one or all | ✅ | ✅ | ✅ | Own notifications only; another user's notification answers 404. |
 | C15 | See counts of own overdue and due-today tasks | ✅ | ✅ | ✅ | Counted in the selected project, computed on request in the actor's timezone; not stored as notifications. Links to that project's My work (V14). The unread count stays workspace-wide. |
 
+## Chat
+
+Chat belongs to a project: its channels and direct messages are open only to the people who can open that project, in an active (not archived) project. Only channels are stored. Messages are relayed live to whoever is signed in at that moment and are never saved, so they are not searchable, not in activity, and not in notifications.
+
+| ID | Feature | WORKSPACE_OWNER | ADMIN | MEMBER | Notes / review decision |
+| --- | --- | :---: | :---: | :---: | --- |
+| H01 | View a project's channels | ✅ | ✅ | ✅ | Every project has a default #general channel, created with the project. |
+| H02 | Create a channel | ✅ | ✅ | ❌ | ADMIN of that project or the workspace owner. Names are lowercase words joined by dashes, up to 40 characters, unique per project; up to 50 channels per project. |
+| H03 | Rename a channel | ✅ | ✅ | ❌ | ADMIN of that project or the workspace owner. #general can be renamed. |
+| H04 | Delete a channel | ✅ | ✅ | ❌ | ADMIN of that project or the workspace owner, with six-second Undo (M06). The default channel cannot be deleted. |
+| H05 | Send and receive channel messages | ✅ | ✅ | ✅ | Delivered to everyone who can open the project and is signed in when it is sent. Up to 4000 characters. |
+| H06 | Send and receive direct messages | ✅ | ✅ | ✅ | With another person who can open the same project, only while they are signed in; to someone offline the send is refused. Not to yourself. |
+| H07 | See who is online in a project | ✅ | ✅ | ✅ | Only for people who can open the project. |
+| H08 | Keep chat history | ❌ | ❌ | ❌ | Not available: messages are not stored. Reloading, signing out or losing access clears them, and losing access stops delivery at once. |
+
 ## Mobile and recovery
 
 | ID | Feature | WORKSPACE_OWNER | ADMIN | MEMBER | Notes / review decision |
 | --- | --- | :---: | :---: | :---: | --- |
-| M01 | Use mobile Board, My tasks, Activity, and More navigation | ✅ | ✅ | ✅ | Prototype includes a separate mobile screen. |
+| M01 | Use mobile Board, My tasks, Chat, Activity, and More navigation | ✅ | ✅ | ✅ | Prototype includes a separate mobile screen. Chat opens the project's chat list (H01–H07). |
 | M02 | Filter mobile tasks to assigned-to-me | ✅ | ✅ | ✅ | Actual signed-in actor identity. |
 | M03 | Add/edit/move/delete tasks using mobile sheets | ✅ | ✅ | ✅ | Same permissions as desktop task actions. |
 | M04 | Change personal appearance/theme on mobile | ✅ | ✅ | ✅ | Also available on desktop; persisted per account. |
 | M05 | Create or archive projects from mobile | ✅ | ❌ | ❌ | Mobile supports these actions with desktop-equivalent permissions: P01/S12 allow only the workspace owner. All users can create a workspace on mobile under W02. |
-| M06 | Undo own supported destructive action | ✅ | ✅ | ✅ | Six-second Undo for tasks, labels, projects, and workspace-member removal. After expiry, deletion is permanent through the application. Current permissions still apply. |
+| M06 | Undo own supported destructive action | ✅ | ✅ | ✅ | Six-second Undo for tasks, labels, chat channels, projects, and workspace-member removal. After expiry, deletion is permanent through the application. Current permissions still apply. |
 
 ## Agreed decisions and delivery details
 
@@ -220,7 +235,7 @@ All allowed task actions below apply to accessible, active projects. Admins/memb
 | R4 | Membership lifecycle and history | Revoke access and clear affected assignments on removal/deactivation. Retain authored comments/history. Deactivation retains project memberships and seats for reactivation. | Agreed. |
 | R5 | Ownership and admin safeguards | Transfer ownership to an active workspace user; explicitly choose former owner's project assignments/roles. Exactly one owner. Admins can manage other admins, but cannot remove/demote themselves. Projects may have no admin. No self-service workspace/project leaving. | Agreed. |
 | R6 | Subtasks | Keep full nested tasks and independent fields. All roles may rename/delete subtasks and complete parents with unfinished subtasks. | Agreed. |
-| R7 | Undo | Offer Undo for six seconds for deletion of tasks, labels, projects, and workspace-member removal. After expiry, deletion is permanent through the application's recovery flow. Enforce current permissions on recovery, preserve required history, and preserve concurrent edits rather than restoring global snapshots. | Agreed: six seconds, with no longer recovery window. |
+| R7 | Undo | Offer Undo for six seconds for deletion of tasks, labels, chat channels, projects, and workspace-member removal. After expiry, deletion is permanent through the application's recovery flow. Enforce current permissions on recovery, preserve required history, and preserve concurrent edits rather than restoring global snapshots. | Agreed: six seconds, with no longer recovery window. |
 | R8 | Saved views | Personal only; persisted per creator and project. No sharing or changes to another user's views. | Agreed. |
 | R9 | Account provisioning | Users register themselves. Owners add existing accounts by email; project admins add existing workspace users to projects. No invitations. | Agreed. |
 | R10 | Existing database data | Discard the existing configured Prisma Postgres development/production database data and initialize the new schema with fresh data. No existing-data migration, role mapping, label conversion, or legacy membership backfill is required. Schema creation/versioning is still required for fresh installs. | Agreed. Reset the existing configured hosted Prisma Postgres database as clarified by the user. Verify the configured target before execution; the configured hosted database reset has now been executed. |

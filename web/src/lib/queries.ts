@@ -2,6 +2,7 @@ import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { api, apiAll } from "./api";
 import type {
   AppNotification,
+  Channel,
   NotificationSummary,
   ActivityEvent,
   Paginated,
@@ -42,6 +43,7 @@ export const keys = {
   taskComments: (id: string) => ["task", id, "comments"] as const,
   taskActivity: (id: string) => ["task", id, "activity"] as const,
   projectActivity: (id: string) => ["project", id, "activity"] as const,
+  projectChannels: (id: string) => ["project", id, "channels"] as const,
   workspaceMembers: (id: string) => ["workspace", id, "members"] as const,
   workspaceStats: (id: string) => ["workspace", id, "stats"] as const,
   notifications: (workspaceId: string, unreadOnly = false) =>
@@ -106,6 +108,13 @@ export const projectMembersQuery = (id: string) =>
     queryKey: keys.projectMembers(id),
     queryFn: ({ signal }) =>
       api<ProjectPerson[]>(`/projects/${id}/members`, { signal }),
+  });
+
+/** The project's chat channels, #general first (H01). */
+export const projectChannelsQuery = (id: string) =>
+  queryOptions({
+    queryKey: keys.projectChannels(id),
+    queryFn: ({ signal }) => api<Channel[]>(`/projects/${id}/channels`, { signal }),
   });
 
 export const projectCandidatesQuery = (id: string) =>

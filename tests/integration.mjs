@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { io } from "socket.io-client";
 
 // Exercises real HTTP authorization and persistence. Creates only its own
 // uniquely named fixtures; never resets the database or modifies other data.
@@ -48,6 +49,8 @@ const [owner, admin, member, outsider] = await Promise.all([
   actor("outsider"),
 ]);
 let ws;
+// Chat sockets opened by the run; closed before the run ends, pass or fail.
+const sockets = [];
 try {
   ws = await request(
     owner,
@@ -587,6 +590,412 @@ try {
     "Only one concurrent refresh succeeds",
   );
   admin.tokens = (await refreshed.find((r) => r.status === 200).json()).tokens;
+
+  // Chat. Channels are stored; messages are only relayed to live sockets.
+  // State here: owner; admin (ADMIN) and member (MEMBER) on the project, its
+  // two seats full; outsider is in the workspace but on no project.
+  const channels = await request(member, `/projects/${project.id}/channels`);
+  check(
+    channels.length === 1 &&
+      channels[0].name === "general" &&
+      channels[0].isDefault,
+    "Every project starts with #general",
+  );
+  const general = channels[0];
+  await request(
+    outsider,
+    `/projects/${project.id}/channels`,
+    "GET",
+    undefined,
+    404,
+  );
+  await request(
+    member,
+    `/projects/${project.id}/channels`,
+    "POST",
+    { name: "design" },
+    403,
+  );
+  await request(
+    admin,
+    `/projects/${project.id}/channels`,
+    "POST",
+    { name: "Design review" },
+    422,
+  );
+  const design = await request(
+    admin,
+    `/projects/${project.id}/channels`,
+    "POST",
+    { name: "Design" },
+    201,
+  );
+  check(design.name === "design", "Channel names are stored lowercase");
+  await request(
+    owner,
+    `/projects/${project.id}/channels`,
+    "POST",
+    { name: "design" },
+    409,
+  );
+  await request(
+    member,
+    `/channels/${design.id}`,
+    "PATCH",
+    { name: "nope" },
+    403,
+  );
+  const renamed = await request(admin, `/channels/${design.id}`, "PATCH", {
+    name: "design-review",
+  });
+  check(renamed.name === "design-review", "Admins rename channels");
+  await request(admin, `/channels/${general.id}`, "DELETE", undefined, 400);
+  await request(member, `/channels/${design.id}`, "DELETE", undefined, 403);
+  const channelDeletion = await request(
+    admin,
+    `/channels/${design.id}`,
+    "DELETE",
+  );
+  check(
+    (await request(member, `/projects/${project.id}/channels`)).length === 1,
+    "Deleted channels leave the list",
+  );
+  await request(
+    member,
+    `/recovery/${channelDeletion.recoveryId}/undo`,
+    "POST",
+    undefined,
+    403,
+  );
+  await request(admin, `/recovery/${channelDeletion.recoveryId}/undo`, "POST");
+  check(
+    (await request(member, `/projects/${project.id}/channels`)).length === 2,
+    "Undo restores a deleted channel",
+  );
+  const [hiddenGeneral] = await request(
+    owner,
+    `/projects/${hidden.id}/channels`,
+  );
+
+  const origin = new URL(base).origin;
+  const open = (user, workspaceId = ws.id, token = user.tokens.accessToken) =>
+    new Promise((resolve) => {
+      const socket = io(origin, {
+        auth: { token, workspaceId },
+        transports: ["websocket"],
+        reconnection: false,
+        forceNew: true,
+      });
+      sockets.push(socket);
+      socket.once("connect", () => resolve({ socket }));
+      socket.once("connect_error", (error) =>
+        resolve({ error: error.data ?? { message: error.message } }),
+      );
+    });
+  const connected = async (user, workspaceId, token) => {
+    const result = await open(user, workspaceId, token);
+    check(result.socket, `Socket connects: ${JSON.stringify(result.error)}`);
+    return result.socket;
+  };
+  const send = (socket, event, payload) =>
+    socket.timeout(5000).emitWithAck(event, payload);
+  // Resolves with the first matching event; fails the run if none arrives.
+  const next = (socket, event, match = () => true, ms = 4000) =>
+    new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        socket.off(event, handler);
+        reject(new Error(`Timed out waiting for ${event}`));
+      }, ms);
+      const handler = (data) => {
+        if (!match(data)) return;
+        clearTimeout(timer);
+        socket.off(event, handler);
+        resolve(data);
+      };
+      socket.on(event, handler);
+    });
+  // True when no matching event arrives within the window.
+  const silent = (socket, event, match = () => true, ms = 800) =>
+    new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        socket.off(event, handler);
+        resolve(true);
+      }, ms);
+      const handler = (data) => {
+        if (!match(data)) return;
+        clearTimeout(timer);
+        socket.off(event, handler);
+        resolve(false);
+      };
+      socket.on(event, handler);
+    });
+
+  check(
+    (await open(member, ws.id, "not-a-token")).error?.status === 401,
+    "Sockets need a valid access token",
+  );
+  check(
+    (await open(member, crypto.randomUUID())).error?.status === 404,
+    "Sockets need workspace membership",
+  );
+  const [ownerSocket, adminSocket, memberSocket, outsiderSocket] =
+    await Promise.all(
+      [owner, admin, member, outsider].map((user) => connected(user)),
+    );
+
+  const presence = await send(memberSocket, "presence:list", {
+    projectId: project.id,
+  });
+  check(
+    presence.ok &&
+      [owner, admin, member].every((user) =>
+        presence.data.userIds.includes(user.user.id),
+      ) &&
+      !presence.data.userIds.includes(outsider.user.id),
+    "Presence lists who is online in the project",
+  );
+  const hiddenPresence = await send(memberSocket, "presence:list", {
+    projectId: hidden.id,
+  });
+  check(
+    !hiddenPresence.ok && hiddenPresence.error.status === 404,
+    "Presence stays inside accessible projects",
+  );
+
+  const listChanged = next(
+    memberSocket,
+    "channels:changed",
+    (event) => event.projectId === project.id,
+  );
+  await request(
+    admin,
+    `/projects/${project.id}/channels`,
+    "POST",
+    { name: "release" },
+    201,
+  );
+  await listChanged;
+  check(true, "Channel changes reach the project live");
+
+  const delivered = next(
+    adminSocket,
+    "message:new",
+    (message) => message.clientId === "c1",
+  );
+  const outsiderHears = silent(outsiderSocket, "message:new");
+  const sent = await send(memberSocket, "message:send", {
+    target: { channelId: general.id },
+    body: "  Hello team  ",
+    clientId: "c1",
+  });
+  check(
+    sent.ok &&
+      sent.data.body === "Hello team" &&
+      sent.data.author.id === member.user.id,
+    "Channel messages are acknowledged",
+  );
+  const received = await delivered;
+  check(
+    received.id === sent.data.id && received.channelId === general.id,
+    "People on the project receive channel messages",
+  );
+  check(await outsiderHears, "People outside the project hear nothing");
+  const blank = await send(memberSocket, "message:send", {
+    target: { channelId: general.id },
+    body: "   ",
+  });
+  check(!blank.ok && blank.error.status === 422, "Empty messages are refused");
+  const elsewhere = await send(memberSocket, "message:send", {
+    target: { channelId: hiddenGeneral.id },
+    body: "Hi",
+  });
+  check(
+    !elsewhere.ok && elsewhere.error.status === 404,
+    "Channels of other projects are out of reach",
+  );
+
+  const dmArrives = next(
+    adminSocket,
+    "message:new",
+    (message) => message.clientId === "d1",
+  );
+  const ownerOverhears = silent(
+    ownerSocket,
+    "message:new",
+    (message) => message.clientId === "d1",
+  );
+  const dm = await send(memberSocket, "message:send", {
+    target: { projectId: project.id, userId: admin.user.id },
+    body: "Quick question",
+    clientId: "d1",
+  });
+  check(
+    dm.ok && dm.data.recipientId === admin.user.id && !dm.data.channelId,
+    "Direct messages are acknowledged",
+  );
+  check(
+    (await dmArrives).author.id === member.user.id,
+    "The recipient receives the direct message",
+  );
+  check(await ownerOverhears, "Direct messages reach only the two people");
+  const toOutsider = await send(memberSocket, "message:send", {
+    target: { projectId: project.id, userId: outsider.user.id },
+    body: "Hi",
+  });
+  check(
+    !toOutsider.ok && toOutsider.error.status === 404,
+    "Direct messages stay among the project's people",
+  );
+  const toSelf = await send(memberSocket, "message:send", {
+    target: { projectId: project.id, userId: member.user.id },
+    body: "Hi me",
+  });
+  check(
+    !toSelf.ok && toSelf.error.status === 400,
+    "No direct messages to yourself",
+  );
+
+  const ownerLeaves = next(
+    memberSocket,
+    "presence:changed",
+    (event) =>
+      event.userId === owner.user.id && event.projectId === project.id,
+  );
+  ownerSocket.disconnect();
+  check(
+    (await ownerLeaves).online === false,
+    "Others see when someone goes offline",
+  );
+  const offline = await send(memberSocket, "message:send", {
+    target: { projectId: project.id, userId: owner.user.id },
+    body: "Are you there?",
+  });
+  check(
+    !offline.ok && offline.error.status === 409,
+    "Offline people can't be messaged",
+  );
+
+  const adminLoses = next(
+    adminSocket,
+    "access:changed",
+    (event) => !event.projectIds.includes(project.id),
+  );
+  await request(
+    owner,
+    `/projects/${project.id}/members/${admin.user.id}`,
+    "DELETE",
+  );
+  await adminLoses;
+  const removedHears = silent(
+    adminSocket,
+    "message:new",
+    (message) => message.clientId === "c2",
+  );
+  await send(memberSocket, "message:send", {
+    target: { channelId: general.id },
+    body: "After the removal",
+    clientId: "c2",
+  });
+  check(
+    await removedHears,
+    "Removed people stop receiving the project's messages",
+  );
+  const removedSend = await send(adminSocket, "message:send", {
+    target: { channelId: general.id },
+    body: "Still here?",
+  });
+  check(
+    !removedSend.ok && removedSend.error.status === 404,
+    "Removed people can't post",
+  );
+  const adminBack = next(adminSocket, "access:changed", (event) =>
+    event.projectIds.includes(project.id),
+  );
+  await request(owner, `/projects/${project.id}/members`, "POST", {
+    userId: admin.user.id,
+    role: "ADMIN",
+  });
+  await adminBack;
+
+  const archivedOut = next(
+    memberSocket,
+    "access:changed",
+    (event) => !event.projectIds.includes(project.id),
+  );
+  await request(owner, `/projects/${project.id}/archive`, "POST");
+  await archivedOut;
+  const archivedSend = await send(memberSocket, "message:send", {
+    target: { channelId: general.id },
+    body: "Anyone?",
+  });
+  check(
+    !archivedSend.ok && archivedSend.error.status === 400,
+    "Archived projects take no messages",
+  );
+  const restoredAccess = next(memberSocket, "access:changed", (event) =>
+    event.projectIds.includes(project.id),
+  );
+  await request(owner, `/projects/${project.id}/unarchive`, "POST");
+  await restoredAccess;
+
+  const burst = await Promise.all(
+    Array.from({ length: 25 }, () =>
+      send(outsiderSocket, "message:send", {
+        target: { channelId: general.id },
+        body: "spam",
+      }),
+    ),
+  );
+  check(
+    burst.some((result) => !result.ok && result.error.status === 429),
+    "Sockets that send too fast are slowed down",
+  );
+
+  const rotated = await request(null, "/auth/refresh", "POST", {
+    refreshToken: admin.tokens.refreshToken,
+  });
+  admin.tokens = rotated.tokens;
+  const handover = await send(adminSocket, "session:refresh", {
+    token: admin.tokens.accessToken,
+  });
+  check(handover.ok, "Sockets take over a refreshed session");
+  const otherAccount = await send(adminSocket, "session:refresh", {
+    token: member.tokens.accessToken,
+  });
+  check(
+    !otherAccount.ok && otherAccount.error.status === 401,
+    "Sockets can't switch to another account",
+  );
+
+  const second = await request(null, "/auth/login", "POST", {
+    email: member.user.email,
+    password,
+  });
+  const secondSocket = await connected(
+    member,
+    ws.id,
+    second.tokens.accessToken,
+  );
+  const dropped = new Promise((resolve) =>
+    secondSocket.once("disconnect", resolve),
+  );
+  await request(
+    second,
+    "/auth/logout",
+    "POST",
+    { refreshToken: second.tokens.refreshToken },
+    204,
+  );
+  const reason = await Promise.race([
+    dropped,
+    new Promise((resolve) => setTimeout(() => resolve("still open"), 3000)),
+  ]);
+  check(
+    reason === "io server disconnect",
+    "Signing out closes that session's sockets",
+  );
+  check(memberSocket.connected, "Other sessions stay connected");
+  for (const socket of sockets) socket.disconnect();
   await request(owner, `/workspaces/${ws.id}/transfer`, "POST", {
     userId: admin.user.id,
     assignments: [{ projectId: project.id, role: "MEMBER" }],
@@ -610,6 +1019,7 @@ try {
   await request(member, "/auth/me", "GET", undefined, 401);
   console.log(`PASS: ${assertions} integration assertions`);
 } finally {
+  for (const socket of sockets) socket.disconnect();
   // Delete only this run's workspace and accounts. Keep cleanup failures visible.
   if (ws) {
     for (const user of [owner, admin]) {

@@ -6,6 +6,7 @@ import {
   CircleUserRound,
   Ellipsis,
   LayoutGrid,
+  MessageSquare,
   Search,
   Settings,
   SlidersHorizontal,
@@ -21,6 +22,7 @@ import {
   MenuSeparator,
   MenuTrigger,
 } from "@/components/ui/menu";
+import { unreadIn, useChatState } from "@/lib/chat";
 import { cn } from "@/lib/cn";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { ROLE_LABELS } from "@/lib/design";
@@ -33,7 +35,7 @@ import {
 } from "@/lib/queries";
 import { useSelectedProject } from "@/lib/selected-project";
 import type { ProjectListItem, Role } from "@/lib/types";
-import { isViewTab, PROJECT_TABS, type ProjectTab } from "./project-tabs";
+import { isViewTab, tabOf, type ProjectTab } from "./project-tabs";
 
 const navItem =
   "flex h-[34px] items-center gap-2.5 rounded-[7px] px-2.5 text-left text-base no-underline transition-colors";
@@ -41,11 +43,19 @@ const navOn = "bg-accent-soft font-semibold text-ink hover:bg-accent-soft hover:
 const navOff = "font-normal text-ink-2 hover:bg-hover hover:text-ink-2";
 
 /** The project page the user is on, or null on a workspace page. */
-const useCurrentTab = (): ProjectTab | null => {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const last = pathname.split("/").at(-1) as ProjectTab;
-  return pathname.includes("/p/") && PROJECT_TABS.includes(last) ? last : null;
-};
+const useCurrentTab = (): ProjectTab | null =>
+  useRouterState({ select: (s) => tabOf(s.location.pathname) });
+
+/** Unread chat count, as a pill; nothing when zero. */
+function UnreadBadge({ count }: { count: number }) {
+  if (!count) return null;
+  return (
+    <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-accent px-1.5 text-2xs font-semibold text-white">
+      {count > 99 ? "99+" : count}
+      <span className="sr-only"> unread</span>
+    </span>
+  );
+}
 
 /** The owner and the project's admins manage it (S01). */
 const canManage = (isOwner: boolean, project: ProjectListItem) =>
@@ -66,6 +76,7 @@ export function Sidebar({
   const project = useSelectedProject();
   const tab = useCurrentTab();
   const currentRole: Role = isOwner ? "WORKSPACE_OWNER" : (project?.role ?? "MEMBER");
+  const unread = useChatState((s) => s.unread);
 
   return (
     <nav
@@ -111,6 +122,15 @@ export function Sidebar({
                 icon={<CircleUserRound size={16} aria-hidden />}
               >
                 My work
+              </ProjectLink>
+              <ProjectLink
+                project={project}
+                to="chat"
+                on={tab === "chat"}
+                icon={<MessageSquare size={16} aria-hidden />}
+                badge={<UnreadBadge count={unreadIn(unread, project.id)} />}
+              >
+                Chat
               </ProjectLink>
               <ProjectLink
                 project={project}
@@ -177,12 +197,14 @@ function ProjectLink({
   to,
   on,
   icon,
+  badge,
   children,
 }: {
   project: ProjectListItem;
   to: ProjectTab;
   on: boolean;
   icon: ReactNode;
+  badge?: ReactNode;
   children: ReactNode;
 }) {
   const { workspaceId } = useParams({ from: "/_app/w/$workspaceId" });
@@ -195,6 +217,7 @@ function ProjectLink({
     >
       {icon}
       <span className="flex-1">{children}</span>
+      {badge}
     </Link>
   );
 }
@@ -213,8 +236,14 @@ function ProjectMenu({ onCreateProject }: { onCreateProject: () => void }) {
   const tab = useCurrentTab();
   const navigate = useNavigate();
   const isOwner = workspace.role === "WORKSPACE_OWNER";
+  const unread = useChatState((s) => s.unread);
 
   if (projects.length === 0) return null;
+  // Chat arriving in the projects not on screen.
+  const elsewhere = projects.reduce(
+    (n, p) => (p.id === selected?.id ? n : n + unreadIn(unread, p.id)),
+    0,
+  );
   const active = projects.filter((p) => !p.archivedAt);
   const archived = projects.filter((p) => p.archivedAt);
 
@@ -253,6 +282,12 @@ function ProjectMenu({ onCreateProject }: { onCreateProject: () => void }) {
         ) : (
           <span className="flex-1 text-sm text-muted">Choose a project</span>
         )}
+        {elsewhere ? (
+          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-2xs font-semibold text-white">
+            {elsewhere > 99 ? "99+" : elsewhere}
+            <span className="sr-only"> unread in other projects</span>
+          </span>
+        ) : null}
         <ChevronsUpDown size={16} className="text-muted" aria-hidden />
       </MenuTrigger>
       <MenuPopup matchTrigger>
@@ -267,6 +302,8 @@ function ProjectMenu({ onCreateProject }: { onCreateProject: () => void }) {
             <span className="flex-1 truncate">{p.name}</span>
             {p.id === selected?.id ? (
               <span className="text-xs text-muted">current</span>
+            ) : unreadIn(unread, p.id) ? (
+              <UnreadBadge count={unreadIn(unread, p.id)} />
             ) : (
               <span className="text-xs text-muted">{p._count.tasks}</span>
             )}

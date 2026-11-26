@@ -14,6 +14,7 @@ import type {
   UpdateWorkspaceInput,
   AddMemberInput,
 } from "./workspaces.schema.js";
+import { realtime } from "../../lib/realtime.js";
 import { scheduleDeletion } from "../../lib/recovery.js";
 const userSelect = { id: true, name: true, email: true, avatar: true };
 export const create = async (actor: Actor, input: CreateWorkspaceInput) => {
@@ -95,6 +96,7 @@ export const update = async (
 export const remove = async (actor: Actor, id: string) => {
   await requireMembership(actor.id, id, Role.WORKSPACE_OWNER);
   await prisma.workspace.delete({ where: { id } });
+  realtime.closeWorkspace(id);
 };
 export const listMembers = async (
   actor: Actor,
@@ -177,7 +179,7 @@ export const updateMemberRole = async (
     where: { userId_workspaceId: { userId, workspaceId } },
   });
   if (!target || target.deletedAt) throw notFound("Membership");
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "Workspace" WHERE id = ${workspaceId} FOR UPDATE`;
     await requireMembership(
       actor.id,
@@ -209,6 +211,8 @@ export const updateMemberRole = async (
     );
     return updated;
   });
+  realtime.syncWorkspace(workspaceId);
+  return result;
 };
 export const removeMember = async (
   actor: Actor,
@@ -235,7 +239,7 @@ export const transfer = async (
   assignments: { projectId: string; role: Role }[],
 ) => {
   await requireMembership(actor.id, workspaceId, Role.WORKSPACE_OWNER);
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "Workspace" WHERE id = ${workspaceId} FOR UPDATE`;
     const ws = await tx.workspace.findUniqueOrThrow({
       where: { id: workspaceId },
@@ -301,4 +305,6 @@ export const transfer = async (
     );
     return { transferred: true };
   });
+  realtime.syncWorkspace(workspaceId);
+  return result;
 };

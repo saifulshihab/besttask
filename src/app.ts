@@ -7,17 +7,20 @@ import { prisma } from "./lib/prisma.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { apiRouter } from "./routes.js";
 
+/** Browser origins allowed to call the API and open chat sockets. */
+export const corsOrigins = () =>
+  (process.env.CORS_ORIGIN ?? "http://localhost:3100")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
 export const createApp = () => {
   const app = express();
 
   app.use(helmet());
-  const corsOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:3100")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
   app.use(
     cors({
-      origin: corsOrigins,
+      origin: corsOrigins(),
       allowedHeaders: ["Content-Type", "Authorization"],
     }),
   );

@@ -3,6 +3,7 @@ import { prisma } from "./prisma.js";
 import { requireMembership } from "./rbac.js";
 import { projectScope } from "./scope.js";
 import { badRequest, notFound, forbidden } from "./errors.js";
+import { realtime } from "./realtime.js";
 import { Role } from "../generated/prisma/enums.js";
 import type { Actor } from "./actor.js";
 import type { Prisma } from "../generated/prisma/client.js";
@@ -18,9 +19,25 @@ const mutate = async (
     await tx.task.update({ where: { id }, data: { deletedAt } });
   else if (type === "label")
     await tx.label.update({ where: { id }, data: { deletedAt } });
+  else if (type === "channel")
+    await tx.channel.update({ where: { id }, data: { deletedAt } });
   else if (type === "membership")
     await tx.membership.update({ where: { id }, data: { deletedAt } });
   else throw badRequest("Unknown recovery type");
+};
+/** Labels and channels are managed by project admins; tasks by any role. */
+const minimumFor = (type: string) =>
+  type === "label" || type === "channel" ? Role.ADMIN : Role.MEMBER;
+type RecoverableType = "task" | "label" | "project" | "membership" | "channel";
+/** Live clients follow deletes and restores: rooms for access, lists for channels. */
+const announce = (
+  type: string,
+  workspaceId: string,
+  projectId?: string | null,
+) => {
+  if (type === "project" || type === "membership")
+    realtime.syncWorkspace(workspaceId);
+  if (type === "channel" && projectId) realtime.channelsChanged(projectId);
 };
 export const scheduleDeletion = async (
   actor: Actor,
@@ -31,7 +48,7 @@ export const scheduleDeletion = async (
   /** What was deleted (title or name), so the activity entry can name it. */
   metadata?: Prisma.InputJsonValue,
 ) => {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "Workspace" WHERE id = ${workspaceId} FOR UPDATE`;
     if (entityType === "membership" || entityType === "project")
       await requireMembership(
@@ -42,12 +59,7 @@ export const scheduleDeletion = async (
         tx,
       );
     else if (projectId)
-      await projectScope(
-        actor.id,
-        projectId,
-        entityType === "label" ? Role.ADMIN : Role.MEMBER,
-        tx,
-      );
+      await projectScope(actor.id, projectId, minimumFor(entityType), tx);
     const existing = await tx.recovery.findFirst({
       where: { entityId, entityType },
     });
@@ -68,7 +80,7 @@ export const scheduleDeletion = async (
         workspaceId,
         projectId,
         actorId: actor.id,
-        entityType: entityType as "task" | "label" | "project" | "membership",
+        entityType: entityType as RecoverableType,
         entityId,
         action: entityType + ".deleted",
         ...(metadata === undefined ? {} : { metadata }),
@@ -87,6 +99,8 @@ export const scheduleDeletion = async (
     });
     return { recoveryId: record.id, expiresAt: record.expiresAt };
   });
+  announce(entityType, workspaceId, projectId);
+  return result;
 };
 export const undo = async (actor: Actor, id: string) => {
   const r = await prisma.recovery.findUnique({ where: { id } });
@@ -95,12 +109,8 @@ export const undo = async (actor: Actor, id: string) => {
   if (r.entityType === "project" || r.entityType === "membership")
     await requireMembership(actor.id, r.workspaceId, Role.WORKSPACE_OWNER);
   else if (r.projectId)
-    await projectScope(
-      actor.id,
-      r.projectId,
-      r.entityType === "label" ? Role.ADMIN : Role.MEMBER,
-    );
-  return prisma.$transaction(async (tx) => {
+    await projectScope(actor.id, r.projectId, minimumFor(r.entityType));
+  const result = await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "Workspace" WHERE id = ${r.workspaceId} FOR UPDATE`;
     if (r.entityType === "membership" || r.entityType === "project")
       await requireMembership(
@@ -111,12 +121,7 @@ export const undo = async (actor: Actor, id: string) => {
         tx,
       );
     else if (r.projectId)
-      await projectScope(
-        actor.id,
-        r.projectId,
-        r.entityType === "label" ? Role.ADMIN : Role.MEMBER,
-        tx,
-      );
+      await projectScope(actor.id, r.projectId, minimumFor(r.entityType), tx);
     const current = await tx.recovery.findUnique({ where: { id } });
     if (!current || current.expiresAt.getTime() <= Date.now())
       throw badRequest("The six-second Undo window has expired");
@@ -127,7 +132,7 @@ export const undo = async (actor: Actor, id: string) => {
         workspaceId: r.workspaceId,
         ...(r.projectId ? { projectId: r.projectId } : {}),
         actorId: actor.id,
-        entityType: r.entityType as "task" | "label" | "project" | "membership",
+        entityType: r.entityType as RecoverableType,
         entityId: r.entityId,
         action: r.entityType + ".restored",
       },
@@ -135,6 +140,8 @@ export const undo = async (actor: Actor, id: string) => {
     );
     return { restored: true };
   });
+  announce(r.entityType, r.workspaceId, r.projectId);
+  return result;
 };
 // Expiry is checked by Undo even if this cleanup worker has not run yet.
 export const purgeExpired = async () => {
@@ -156,6 +163,10 @@ export const purgeExpired = async () => {
         });
       if (r.entityType === "label")
         await tx.label.deleteMany({
+          where: { id: r.entityId, deletedAt: { not: null } },
+        });
+      if (r.entityType === "channel")
+        await tx.channel.deleteMany({
           where: { id: r.entityId, deletedAt: { not: null } },
         });
       if (r.entityType === "membership")

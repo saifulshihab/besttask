@@ -2,6 +2,10 @@ import { Router } from "express";
 import { projectActivityRouter } from "./modules/activity/activity.routes.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 import {
+  channelsRouter,
+  projectChannelsRouter,
+} from "./modules/chat/chat.routes.js";
+import {
   commentsRouter,
   taskCommentsRouter,
 } from "./modules/comments/comments.routes.js";
@@ -39,12 +43,14 @@ apiRouter.use(
 );
 apiRouter.use("/projects/:projectId/tasks", projectTasksRouter);
 apiRouter.use("/projects/:projectId/activity", projectActivityRouter);
+apiRouter.use("/projects/:projectId/channels", projectChannelsRouter);
 apiRouter.use("/tasks/:taskId/comments", taskCommentsRouter);
 
 apiRouter.use("/workspaces", workspacesRouter);
 apiRouter.use("/projects", projectsRouter);
 apiRouter.use("/tasks", tasksRouter);
 apiRouter.use("/labels", labelsRouter);
+apiRouter.use("/channels", channelsRouter);
 apiRouter.use("/comments", commentsRouter);
 apiRouter.use("/notifications", notificationsRouter);
 

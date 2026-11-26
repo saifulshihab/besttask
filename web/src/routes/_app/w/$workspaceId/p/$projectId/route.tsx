@@ -31,6 +31,8 @@ function ProjectLayout() {
   const navigate = useNavigate();
   const mobile = useIsMobile();
   const onBoard = useRouterState({ select: (s) => s.location.pathname.endsWith("/board") });
+  // Chat fills the window with its own header and columns.
+  const onChat = useRouterState({ select: (s) => s.location.pathname.includes(`/p/${projectId}/chat`) });
   // On phones the board is the prototype's mobile app; other tabs stay pages.
   // Members' photos for cards, rows, comments and activity in this project.
   const people = useMemo(() => (members.data ?? []).map((p) => p.user), [members.data]);
@@ -42,7 +44,7 @@ function ProjectLayout() {
     );
   return (
     <AvatarDirectory people={people}>
-      <ProjectHeader />
+      {onChat ? null : <ProjectHeader />}
       <Outlet />
       {taskId ? (
         <TaskPanel

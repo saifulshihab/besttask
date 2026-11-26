@@ -1,8 +1,10 @@
 import "dotenv/config";
-import { createApp } from "./app.js";
+import { corsOrigins, createApp } from "./app.js";
 import { env } from "./env.js";
 import { logger } from "./lib/logger.js";
 import { prisma, warmPool } from "./lib/prisma.js";
+import { attachRealtime, closeRealtime } from "./lib/realtime.js";
+import { registerChatHandlers } from "./modules/chat/chat.socket.js";
 
 const app = createApp();
 const server = app.listen(env.PORT, () => {
@@ -12,8 +14,16 @@ const server = app.listen(env.PORT, () => {
   );
 });
 
+// Chat sockets share the HTTP server and port (/socket.io).
+attachRealtime(server, {
+  origins: corsOrigins(),
+  onConnection: registerChatHandlers,
+});
+
 const shutdown = (signal: string) => {
   logger.info({ signal }, "Shutting down");
+  // Open sockets would keep server.close() waiting.
+  closeRealtime();
   server.close(async () => {
     await prisma.$disconnect();
     process.exit(0);

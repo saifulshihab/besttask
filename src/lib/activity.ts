@@ -2,7 +2,13 @@ import { prisma } from "./prisma.js";
 import type { Prisma } from "../generated/prisma/client.js";
 
 export type EntityType =
-  "workspace" | "membership" | "project" | "task" | "comment" | "label";
+  | "workspace"
+  | "membership"
+  | "project"
+  | "task"
+  | "comment"
+  | "label"
+  | "channel";
 
 export interface ActivityInput {
   workspaceId: string;

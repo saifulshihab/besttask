@@ -4,9 +4,21 @@
 
 ### Before you deploy
 
-- **Run the new migration** (`20261121130005_notifications`) before starting the updated API. It only adds the `Notification` table; existing data is untouched. The production container applies it on start (`prisma migrate deploy`); locally run `npm run db:migrate`.
+- **Run the new migrations** (`20261121130005_notifications`, `20261126160000_chat_channels`) before starting the updated API. They add the `Notification` and `Channel` tables and give every existing project a `#general` channel; nothing else changes. The production container applies them on start (`prisma migrate deploy`); locally run `npm run db:migrate`.
+- **Chat needs WebSockets to the API.** Sockets use `/socket.io` on the API's own host and port, so a proxy or host in front of the API must pass WebSocket upgrades through. Chat presence and delivery are kept in the API process's memory: run a single API instance (several would need a socket.io adapter and sticky sessions).
 
 ### Added
+
+- Project chat:
+  - **Chat** is a project link in the sidebar, after My work, with the project's unread count; it is also in ⌘K and in the phone's bottom navigation. It opens the chat screen: a column with the project's channels and direct messages (everyone else on the project, with an online dot or offline ring), beside the open conversation (`/w/…/p/…/chat/<channel id or dm-<userId>>`). On phones the list and the conversation are separate screens.
+  - Messages show with the sender and time, grouped when one person sends several in a row. Enter sends, Shift+Enter starts a new line (on phones the Send button sends). A message the server didn't accept shows "Not sent" with Retry. Every conversation says that chat isn't saved and clears on reload.
+  - Direct messages to someone offline aren't possible: the conversation explains why in place of the message box. In an archived project, chat is off.
+  - A direct message you aren't looking at shows a toast with an Open button, naming the project when it's not the one you're in; channel messages only add to unread counts. The project switcher shows unread counts for your other projects.
+  - Project Admins and the workspace owner add channels with + next to Channels and rename or delete them from the ⋯ menu in the channel header. Channel changes show up for everyone at once and appear in the project's Activity.
+  - Each project has channels, starting with `#general`, created with the project (existing projects get one from the migration). Project Admins and the workspace owner create, rename and delete channels; deleting has the usual six-second Undo, and `#general` can't be deleted (H01–H04).
+  - Messages are live only: they go to the people who can open the project and are signed in at that moment, and are never stored (H05, H08). Direct messages go between two people on the same project, and only while the other person is online (H06). Who is online is shared within the project (H07).
+  - Losing access takes effect at once: removal from the project or workspace, deactivation, archiving, ownership changes, signing out and password changes all update or close the person's live connection.
+  - API: `GET` and `POST /projects/:projectId/channels`, `PATCH` and `DELETE /channels/:channelId`. Socket.io at `/socket.io`, connected with `{ auth: { token, workspaceId } }`: `message:send` (`{ target: { channelId } | { projectId, userId }, body, clientId? }`), `presence:list` and `session:refresh` (send each new access token after a refresh), acknowledged as `{ ok, data | error }`; the server sends `message:new`, `presence:changed`, `channels:changed` and `access:changed`. Sending is limited to 20 messages per 10 seconds per connection.
 
 - "Try the demo" on the sign-in page: fills in the shared demo account (`besttask@gmail.com`) and signs in. The account must exist in the target database; it is an ordinary account shared by every visitor, so anyone using it can change or delete it.
 - CI runs the API integration tests on every pull request and push to `main`, against a throwaway PostgreSQL 16 database with the committed migrations applied, using the compiled API as in production.

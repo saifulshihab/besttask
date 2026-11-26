@@ -2,6 +2,7 @@ import { badRequest, conflict, notFound, unauthorized } from "../../lib/errors.j
 import type { Prisma } from "../../generated/prisma/client.js";
 import { hashPassword, verifyPassword } from "../../lib/password.js";
 import { prisma } from "../../lib/prisma.js";
+import { realtime } from "../../lib/realtime.js";
 import {
   createRefreshToken,
   hashRefreshToken,
@@ -90,10 +91,17 @@ export const refresh = async (presentedToken: string) => {
 };
 
 export const logout = async (presentedToken: string) => {
+  const tokenHash = hashRefreshToken(presentedToken);
   await prisma.refreshToken.updateMany({
-    where: { tokenHash: hashRefreshToken(presentedToken), revokedAt: null },
+    where: { tokenHash, revokedAt: null },
     data: { revokedAt: new Date() },
   });
+  // Chat sockets opened with this session close too.
+  const session = await prisma.refreshToken.findUnique({
+    where: { tokenHash },
+    select: { id: true },
+  });
+  if (session) realtime.dropSession(session.id);
 };
 
 export const me = async (userId: string) => {
@@ -144,6 +152,7 @@ export const changePassword = async (
     }),
     prisma.refreshToken.deleteMany({ where: { userId } }),
   ]);
+  realtime.dropUser(userId);
   return { changed: true };
 };
 export const deleteAccount = async (userId: string, password: string) => {
@@ -174,4 +183,5 @@ export const deleteAccount = async (userId: string, password: string) => {
       },
     });
   });
+  realtime.dropUser(userId);
 };

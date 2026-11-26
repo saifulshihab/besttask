@@ -1,6 +1,17 @@
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Activity, Bell, ChevronDown, Columns3, Ellipsis, Plus, Search, SlidersHorizontal, UserRound } from "lucide-react";
+import {
+  Activity,
+  Bell,
+  ChevronDown,
+  Columns3,
+  Ellipsis,
+  MessageSquare,
+  Plus,
+  Search,
+  SlidersHorizontal,
+  UserRound,
+} from "lucide-react";
 import { Suspense, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { toast, toastError } from "@/lib/toast";
 import { NameDialog } from "@/components/shell/name-dialog";
@@ -10,6 +21,7 @@ import { SearchClear } from "@/components/ui/field";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select } from "@/components/ui/select";
 import { PriorityIcon, StatusDot } from "@/components/tasks/task-badges";
+import { unreadIn, useChatState } from "@/lib/chat";
 import { cn } from "@/lib/cn";
 import { PRIORITIES, ROLE_LABELS, STATUSES, STATUS_ORDER } from "@/lib/design";
 import { relativeTime } from "@/lib/format";
@@ -51,6 +63,7 @@ const pill = (on: boolean) =>
  */
 export function MobileProject({ workspaceId, project }: { workspaceId: string; project: ProjectDetail }) {
   const { data: me } = useSuspenseQuery(meQuery);
+  const chatUnread = useChatState((s) => unreadIn(s.unread, project.id));
   const { data: workspace } = useSuspenseQuery(workspaceQuery(workspaceId));
   const tasksQuery = useQuery(projectTasksQuery(project.id));
   const tasks = useMemo(() => (tasksQuery.data ?? []).filter((t) => !t.parentTaskId), [tasksQuery.data]);
@@ -246,16 +259,35 @@ export function MobileProject({ workspaceId, project }: { workspaceId: string; p
 
       <nav
         aria-label="Mobile"
-        className="fixed inset-x-0 bottom-0 z-20 box-border grid h-[76px] grid-cols-4 border-t border-line bg-canvas pb-3"
+        className="fixed inset-x-0 bottom-0 z-20 box-border grid h-[76px] grid-cols-5 border-t border-line bg-canvas pb-3"
       >
         {(
           [
             ["board", "Board", <Columns3 key="b" size={20} aria-hidden />],
             ["mine", "My tasks", <UserRound key="m" size={20} aria-hidden />],
+            ["chat", "Chat", <MessageSquare key="c" size={20} aria-hidden />],
             ["activity", "Activity", <Activity key="a" size={20} aria-hidden />],
             ["more", "More", <Ellipsis key="o" size={20} aria-hidden />],
-          ] as [Page, string, ReactNode][]
-        ).map(([id, label, icon]) => (
+          ] as [Page | "chat", string, ReactNode][]
+        ).map(([id, label, icon]) =>
+          // Chat is its own page (the chat route), not a tab of this screen.
+          id === "chat" ? (
+            <Link
+              key={id}
+              to="/w/$workspaceId/p/$projectId/chat"
+              params={{ workspaceId, projectId: project.id }}
+              className="relative flex flex-col items-center justify-center gap-1 text-2xs text-muted no-underline"
+            >
+              {icon}
+              {label}
+              {chatUnread ? (
+                <span className="absolute top-1.5 left-[calc(50%+6px)] inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-white ring-2 ring-canvas">
+                  {chatUnread > 99 ? "99+" : chatUnread}
+                  <span className="sr-only"> unread</span>
+                </span>
+              ) : null}
+            </Link>
+          ) : (
           <button
             key={id}
             type="button"
@@ -269,7 +301,8 @@ export function MobileProject({ workspaceId, project }: { workspaceId: string; p
             {icon}
             {label}
           </button>
-        ))}
+          ),
+        )}
       </nav>
 
       <Sheet open={sheet?.kind === "move"} onOpenChange={(o) => !o && close()} title="Move to">

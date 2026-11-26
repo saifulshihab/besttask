@@ -24,6 +24,7 @@ const PAGES: { tab: ProjectTab; label: string; manage?: true }[] = [
   { tab: "list", label: "List" },
   { tab: "calendar", label: "Calendar" },
   { tab: "my-work", label: "My work" },
+  { tab: "chat", label: "Chat" },
   { tab: "activity", label: "Activity" },
   { tab: "members", label: "Members" },
   { tab: "settings", label: "Settings", manage: true },

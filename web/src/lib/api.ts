@@ -90,6 +90,18 @@ const refreshSession = async () => {
   return true;
 };
 
+/**
+ * Rotates the tokens, sharing a rotation already under way. Resolves false
+ * when the session is over (the tokens are then cleared). The chat socket
+ * uses it when its handshake is refused with 401.
+ */
+export const refreshOnce = () => {
+  refreshing ??= refreshSession().finally(() => {
+    refreshing = null;
+  });
+  return refreshing;
+};
+
 export async function api<T>(
   path: string,
   options: RequestOptions = {},
@@ -119,12 +131,9 @@ export async function api<T>(
   const payload: unknown = await response.json().catch(() => null);
 
   if (response.status === 401 && !options.anonymous && !retried) {
-    refreshing ??= refreshSession().finally(() => {
-      refreshing = null;
-    });
     // A failed refresh clears the tokens; the router's session listener then
     // sends the user to the login page.
-    if (await refreshing) return api<T>(path, options, true);
+    if (await refreshOnce()) return api<T>(path, options, true);
   }
 
   if (!response.ok) throw toError(response.status, payload);

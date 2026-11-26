@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { AppShell } from "@/components/shell/app-shell";
 import { RouteError } from "@/components/route-error";
+import { ChatProvider } from "@/lib/chat";
 import { rememberWorkspace } from "@/lib/last-visited";
 import { projectsQuery, workspaceQuery, workspacesQuery } from "@/lib/queries";
 import { SelectedProjectProvider } from "@/lib/selected-project";
@@ -27,9 +28,12 @@ function WorkspaceLayout() {
   const { workspaceId } = Route.useParams();
   return (
     <SelectedProjectProvider workspaceId={workspaceId}>
-      <AppShell>
-        <Outlet />
-      </AppShell>
+      {/* One live chat connection per workspace; a new workspace starts afresh. */}
+      <ChatProvider key={workspaceId} workspaceId={workspaceId}>
+        <AppShell>
+          <Outlet />
+        </AppShell>
+      </ChatProvider>
     </SelectedProjectProvider>
   );
 }

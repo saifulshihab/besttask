@@ -25,10 +25,13 @@ import { Route as AppWWorkspaceIdPProjectIdIndexRouteImport } from './routes/_ap
 import { Route as AppWWorkspaceIdPProjectIdActivityRouteImport } from './routes/_app/w/$workspaceId/p/$projectId/activity'
 import { Route as AppWWorkspaceIdPProjectIdBoardRouteImport } from './routes/_app/w/$workspaceId/p/$projectId/board'
 import { Route as AppWWorkspaceIdPProjectIdCalendarRouteImport } from './routes/_app/w/$workspaceId/p/$projectId/calendar'
+import { Route as AppWWorkspaceIdPProjectIdChatRouteRouteImport } from './routes/_app/w/$workspaceId/p/$projectId/chat/route'
 import { Route as AppWWorkspaceIdPProjectIdListRouteImport } from './routes/_app/w/$workspaceId/p/$projectId/list'
 import { Route as AppWWorkspaceIdPProjectIdMembersRouteImport } from './routes/_app/w/$workspaceId/p/$projectId/members'
 import { Route as AppWWorkspaceIdPProjectIdMyWorkRouteImport } from './routes/_app/w/$workspaceId/p/$projectId/my-work'
 import { Route as AppWWorkspaceIdPProjectIdSettingsRouteImport } from './routes/_app/w/$workspaceId/p/$projectId/settings'
+import { Route as AppWWorkspaceIdPProjectIdChatIndexRouteImport } from './routes/_app/w/$workspaceId/p/$projectId/chat/index'
+import { Route as AppWWorkspaceIdPProjectIdChatConversationIdRouteImport } from './routes/_app/w/$workspaceId/p/$projectId/chat/$conversationId'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -115,6 +118,12 @@ const AppWWorkspaceIdPProjectIdCalendarRoute =
     path: '/calendar',
     getParentRoute: () => AppWWorkspaceIdPProjectIdRouteRoute,
   } as any)
+const AppWWorkspaceIdPProjectIdChatRouteRoute =
+  AppWWorkspaceIdPProjectIdChatRouteRouteImport.update({
+    id: '/chat',
+    path: '/chat',
+    getParentRoute: () => AppWWorkspaceIdPProjectIdRouteRoute,
+  } as any)
 const AppWWorkspaceIdPProjectIdListRoute =
   AppWWorkspaceIdPProjectIdListRouteImport.update({
     id: '/list',
@@ -139,6 +148,18 @@ const AppWWorkspaceIdPProjectIdSettingsRoute =
     path: '/settings',
     getParentRoute: () => AppWWorkspaceIdPProjectIdRouteRoute,
   } as any)
+const AppWWorkspaceIdPProjectIdChatIndexRoute =
+  AppWWorkspaceIdPProjectIdChatIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AppWWorkspaceIdPProjectIdChatRouteRoute,
+  } as any)
+const AppWWorkspaceIdPProjectIdChatConversationIdRoute =
+  AppWWorkspaceIdPProjectIdChatConversationIdRouteImport.update({
+    id: '/$conversationId',
+    path: '/$conversationId',
+    getParentRoute: () => AppWWorkspaceIdPProjectIdChatRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -152,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/w/$workspaceId/settings': typeof AppWWorkspaceIdSettingsRoute
   '/w/$workspaceId/': typeof AppWWorkspaceIdIndexRoute
   '/w/$workspaceId/p/$projectId': typeof AppWWorkspaceIdPProjectIdRouteRouteWithChildren
+  '/w/$workspaceId/p/$projectId/chat': typeof AppWWorkspaceIdPProjectIdChatRouteRouteWithChildren
   '/w/$workspaceId/p/$projectId/activity': typeof AppWWorkspaceIdPProjectIdActivityRoute
   '/w/$workspaceId/p/$projectId/board': typeof AppWWorkspaceIdPProjectIdBoardRoute
   '/w/$workspaceId/p/$projectId/calendar': typeof AppWWorkspaceIdPProjectIdCalendarRoute
@@ -160,6 +182,8 @@ export interface FileRoutesByFullPath {
   '/w/$workspaceId/p/$projectId/my-work': typeof AppWWorkspaceIdPProjectIdMyWorkRoute
   '/w/$workspaceId/p/$projectId/settings': typeof AppWWorkspaceIdPProjectIdSettingsRoute
   '/w/$workspaceId/p/$projectId/': typeof AppWWorkspaceIdPProjectIdIndexRoute
+  '/w/$workspaceId/p/$projectId/chat/$conversationId': typeof AppWWorkspaceIdPProjectIdChatConversationIdRoute
+  '/w/$workspaceId/p/$projectId/chat/': typeof AppWWorkspaceIdPProjectIdChatIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -179,6 +203,8 @@ export interface FileRoutesByTo {
   '/w/$workspaceId/p/$projectId/my-work': typeof AppWWorkspaceIdPProjectIdMyWorkRoute
   '/w/$workspaceId/p/$projectId/settings': typeof AppWWorkspaceIdPProjectIdSettingsRoute
   '/w/$workspaceId/p/$projectId': typeof AppWWorkspaceIdPProjectIdIndexRoute
+  '/w/$workspaceId/p/$projectId/chat/$conversationId': typeof AppWWorkspaceIdPProjectIdChatConversationIdRoute
+  '/w/$workspaceId/p/$projectId/chat': typeof AppWWorkspaceIdPProjectIdChatIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -194,6 +220,7 @@ export interface FileRoutesById {
   '/_app/w/$workspaceId/settings': typeof AppWWorkspaceIdSettingsRoute
   '/_app/w/$workspaceId/': typeof AppWWorkspaceIdIndexRoute
   '/_app/w/$workspaceId/p/$projectId': typeof AppWWorkspaceIdPProjectIdRouteRouteWithChildren
+  '/_app/w/$workspaceId/p/$projectId/chat': typeof AppWWorkspaceIdPProjectIdChatRouteRouteWithChildren
   '/_app/w/$workspaceId/p/$projectId/activity': typeof AppWWorkspaceIdPProjectIdActivityRoute
   '/_app/w/$workspaceId/p/$projectId/board': typeof AppWWorkspaceIdPProjectIdBoardRoute
   '/_app/w/$workspaceId/p/$projectId/calendar': typeof AppWWorkspaceIdPProjectIdCalendarRoute
@@ -202,6 +229,8 @@ export interface FileRoutesById {
   '/_app/w/$workspaceId/p/$projectId/my-work': typeof AppWWorkspaceIdPProjectIdMyWorkRoute
   '/_app/w/$workspaceId/p/$projectId/settings': typeof AppWWorkspaceIdPProjectIdSettingsRoute
   '/_app/w/$workspaceId/p/$projectId/': typeof AppWWorkspaceIdPProjectIdIndexRoute
+  '/_app/w/$workspaceId/p/$projectId/chat/$conversationId': typeof AppWWorkspaceIdPProjectIdChatConversationIdRoute
+  '/_app/w/$workspaceId/p/$projectId/chat/': typeof AppWWorkspaceIdPProjectIdChatIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -217,6 +246,7 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/settings'
     | '/w/$workspaceId/'
     | '/w/$workspaceId/p/$projectId'
+    | '/w/$workspaceId/p/$projectId/chat'
     | '/w/$workspaceId/p/$projectId/activity'
     | '/w/$workspaceId/p/$projectId/board'
     | '/w/$workspaceId/p/$projectId/calendar'
@@ -225,6 +255,8 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/p/$projectId/my-work'
     | '/w/$workspaceId/p/$projectId/settings'
     | '/w/$workspaceId/p/$projectId/'
+    | '/w/$workspaceId/p/$projectId/chat/$conversationId'
+    | '/w/$workspaceId/p/$projectId/chat/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -244,6 +276,8 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/p/$projectId/my-work'
     | '/w/$workspaceId/p/$projectId/settings'
     | '/w/$workspaceId/p/$projectId'
+    | '/w/$workspaceId/p/$projectId/chat/$conversationId'
+    | '/w/$workspaceId/p/$projectId/chat'
   id:
     | '__root__'
     | '/_app'
@@ -258,6 +292,7 @@ export interface FileRouteTypes {
     | '/_app/w/$workspaceId/settings'
     | '/_app/w/$workspaceId/'
     | '/_app/w/$workspaceId/p/$projectId'
+    | '/_app/w/$workspaceId/p/$projectId/chat'
     | '/_app/w/$workspaceId/p/$projectId/activity'
     | '/_app/w/$workspaceId/p/$projectId/board'
     | '/_app/w/$workspaceId/p/$projectId/calendar'
@@ -266,6 +301,8 @@ export interface FileRouteTypes {
     | '/_app/w/$workspaceId/p/$projectId/my-work'
     | '/_app/w/$workspaceId/p/$projectId/settings'
     | '/_app/w/$workspaceId/p/$projectId/'
+    | '/_app/w/$workspaceId/p/$projectId/chat/$conversationId'
+    | '/_app/w/$workspaceId/p/$projectId/chat/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -388,6 +425,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWWorkspaceIdPProjectIdCalendarRouteImport
       parentRoute: typeof AppWWorkspaceIdPProjectIdRouteRoute
     }
+    '/_app/w/$workspaceId/p/$projectId/chat': {
+      id: '/_app/w/$workspaceId/p/$projectId/chat'
+      path: '/chat'
+      fullPath: '/w/$workspaceId/p/$projectId/chat'
+      preLoaderRoute: typeof AppWWorkspaceIdPProjectIdChatRouteRouteImport
+      parentRoute: typeof AppWWorkspaceIdPProjectIdRouteRoute
+    }
     '/_app/w/$workspaceId/p/$projectId/list': {
       id: '/_app/w/$workspaceId/p/$projectId/list'
       path: '/list'
@@ -416,10 +460,43 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWWorkspaceIdPProjectIdSettingsRouteImport
       parentRoute: typeof AppWWorkspaceIdPProjectIdRouteRoute
     }
+    '/_app/w/$workspaceId/p/$projectId/chat/': {
+      id: '/_app/w/$workspaceId/p/$projectId/chat/'
+      path: '/'
+      fullPath: '/w/$workspaceId/p/$projectId/chat/'
+      preLoaderRoute: typeof AppWWorkspaceIdPProjectIdChatIndexRouteImport
+      parentRoute: typeof AppWWorkspaceIdPProjectIdChatRouteRoute
+    }
+    '/_app/w/$workspaceId/p/$projectId/chat/$conversationId': {
+      id: '/_app/w/$workspaceId/p/$projectId/chat/$conversationId'
+      path: '/$conversationId'
+      fullPath: '/w/$workspaceId/p/$projectId/chat/$conversationId'
+      preLoaderRoute: typeof AppWWorkspaceIdPProjectIdChatConversationIdRouteImport
+      parentRoute: typeof AppWWorkspaceIdPProjectIdChatRouteRoute
+    }
   }
 }
 
+interface AppWWorkspaceIdPProjectIdChatRouteRouteChildren {
+  AppWWorkspaceIdPProjectIdChatConversationIdRoute: typeof AppWWorkspaceIdPProjectIdChatConversationIdRoute
+  AppWWorkspaceIdPProjectIdChatIndexRoute: typeof AppWWorkspaceIdPProjectIdChatIndexRoute
+}
+
+const AppWWorkspaceIdPProjectIdChatRouteRouteChildren: AppWWorkspaceIdPProjectIdChatRouteRouteChildren =
+  {
+    AppWWorkspaceIdPProjectIdChatConversationIdRoute:
+      AppWWorkspaceIdPProjectIdChatConversationIdRoute,
+    AppWWorkspaceIdPProjectIdChatIndexRoute:
+      AppWWorkspaceIdPProjectIdChatIndexRoute,
+  }
+
+const AppWWorkspaceIdPProjectIdChatRouteRouteWithChildren =
+  AppWWorkspaceIdPProjectIdChatRouteRoute._addFileChildren(
+    AppWWorkspaceIdPProjectIdChatRouteRouteChildren,
+  )
+
 interface AppWWorkspaceIdPProjectIdRouteRouteChildren {
+  AppWWorkspaceIdPProjectIdChatRouteRoute: typeof AppWWorkspaceIdPProjectIdChatRouteRouteWithChildren
   AppWWorkspaceIdPProjectIdActivityRoute: typeof AppWWorkspaceIdPProjectIdActivityRoute
   AppWWorkspaceIdPProjectIdBoardRoute: typeof AppWWorkspaceIdPProjectIdBoardRoute
   AppWWorkspaceIdPProjectIdCalendarRoute: typeof AppWWorkspaceIdPProjectIdCalendarRoute
@@ -432,6 +509,8 @@ interface AppWWorkspaceIdPProjectIdRouteRouteChildren {
 
 const AppWWorkspaceIdPProjectIdRouteRouteChildren: AppWWorkspaceIdPProjectIdRouteRouteChildren =
   {
+    AppWWorkspaceIdPProjectIdChatRouteRoute:
+      AppWWorkspaceIdPProjectIdChatRouteRouteWithChildren,
     AppWWorkspaceIdPProjectIdActivityRoute:
       AppWWorkspaceIdPProjectIdActivityRoute,
     AppWWorkspaceIdPProjectIdBoardRoute: AppWWorkspaceIdPProjectIdBoardRoute,

@@ -4,6 +4,7 @@ import { requireMembership, visibleProjects } from "../../lib/rbac.js";
 import { projectScope } from "../../lib/scope.js";
 import { badRequest, conflict, notFound } from "../../lib/errors.js";
 import { paginated, toSkipTake } from "../../lib/pagination.js";
+import { realtime } from "../../lib/realtime.js";
 import { scheduleDeletion } from "../../lib/recovery.js";
 import { Role, TaskStatus } from "../../generated/prisma/enums.js";
 import type { Actor } from "../../lib/actor.js";
@@ -53,8 +54,14 @@ export const create = async (
 ) => {
   await requireMembership(actor.id, workspaceId, Role.WORKSPACE_OWNER);
   const key = input.key || (await availableKey(workspaceId, input.name));
+  // Every project starts with its default chat channel (H01).
   const project = await prisma.project.create({
-    data: { ...input, key, workspaceId },
+    data: {
+      ...input,
+      key,
+      workspaceId,
+      channels: { create: { name: "general", isDefault: true } },
+    },
   });
   await recordActivity({
     workspaceId,
@@ -65,6 +72,7 @@ export const create = async (
     action: "project.created",
     metadata: { name: project.name },
   });
+  realtime.syncWorkspace(workspaceId);
   return project;
 };
 export const list = async (
@@ -199,6 +207,8 @@ export const setArchived = async (
     entityId: projectId,
     action: archived ? "project.archived" : "project.restored",
   });
+  // Archived projects have no live chat; restoring brings it back.
+  realtime.syncWorkspace(project.workspaceId);
   return updated;
 };
 export const remove = async (actor: Actor, projectId: string) => {
@@ -292,7 +302,7 @@ export const setMember = async (
   );
   if (userId === actor.id && membership.role !== Role.WORKSPACE_OWNER)
     throw badRequest("Admins cannot remove or change their own role");
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "Workspace" WHERE id = ${project.workspaceId} FOR UPDATE`;
     await projectScope(actor.id, projectId, Role.ADMIN, tx);
     const ws = await tx.workspace.findUniqueOrThrow({
@@ -362,4 +372,6 @@ export const setMember = async (
     );
     return assignment;
   });
+  realtime.syncWorkspace(project.workspaceId);
+  return result;
 };
